@@ -1,0 +1,25 @@
+@page
+@model ServerWeb.Pages.UploadSongModel
+
+<h2>Upload Song</h2>
+
+<form method="post" enctype="multipart/form-data">
+    <div>
+        <label for="Name">Song Name</label>
+        <input type="text" id="Name" name="Name" required />
+    </div>
+    <div>
+        <label for="Author">Author</label>
+        <input type="text" id="Author" name="Author" required />
+    </div>
+    <div>
+        <label for="File">Upload File</label>
+        <input type="file" id="File" name="File" required />
+    </div>
+    <button type="submit">Upload</button>
+</form>
+
+@if (Model.Message != null)
+{
+    <p>@Model.Message</p>
+}
