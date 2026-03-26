@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
+    @Html.AntiForgeryToken()
     @RenderBody()
     @await RenderSectionAsync("Scripts", required: false)
 </body>

@@ -1,5 +1,7 @@
 ﻿@{
     ViewData["Title"] = "Home Page";
+    var username = Context.Session.GetString("Username");
+    var isLoggedIn = !string.IsNullOrEmpty(username);
 }
 <div data-layer="Main Web" class="MainWeb" style="width: 100vw; height: 100vh; position: relative; background: #AAAAAA; overflow: hidden">
   <div data-layer="Content" class="Content" style="width: calc(100vw * 0.784); height: calc(100vh - calc(100vh * 0.1924)); left: calc(100vw * 0.216); top: calc(100vh * 0.1924); position: absolute; background: linear-gradient(180deg, rgba(33.05, 113.66, 212.19, 0.50) 37%, rgba(18.50, 47.70, 91.50, 0.50) 100%)"></div>
@@ -59,12 +61,25 @@
         </div>
       </div>
     </div>
-    <div data-layer="Sign Up" class="SignUp" style="width: 140px; height: 48px; left: calc(100vw * 0.099); top: 97px; position: absolute; background: white; overflow: hidden; border-radius: 999px; cursor: pointer;" role="button" tabindex="0" onclick="window.location.href='/Identity/Account/Register';" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Identity/Account/Register';">
-      <div data-layer="Đăng ký" class="NgK" style="width: 67px; height: 21px; left: 37px; top: 13px; position: absolute; color: black; font-size: 16px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Đăng ký</div>
-    </div>
-    <div data-layer="Login" class="Login" style="width: 140px; height: 48px; left: calc(100vw * 0.099); top: 30px; position: absolute; background: white; overflow: hidden; border-radius: 999px; cursor: pointer;" role="button" tabindex="0" onclick="window.location.href='/Identity/Account/Login';" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Identity/Account/Login';">
-      <div data-layer="Đăng nhập" class="NgNhP" style="width: 115px; height: 30px; left: 25px; top: 12px; position: absolute; color: black; font-size: 16px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Đăng nhập</div>
-    </div>
+    @if (!isLoggedIn)
+    {
+        <div data-layer="Sign Up" class="SignUp" style="width: 140px; height: 48px; left: calc(100vw * 0.099); top: 97px; position: absolute; background: white; overflow: hidden; border-radius: 999px; cursor: pointer;" role="button" tabindex="0" id="registerBtn">
+          <div data-layer="Đăng ký" class="NgK" style="width: 67px; height: 21px; left: 37px; top: 13px; position: absolute; color: black; font-size: 16px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Đăng ký</div>
+        </div>
+        <div data-layer="Login" class="Login" style="width: 140px; height: 48px; left: calc(100vw * 0.099); top: 30px; position: absolute; background: white; overflow: hidden; border-radius: 999px; cursor: pointer;" role="button" tabindex="0" id="loginBtn">
+          <div data-layer="Đăng nhập" class="NgNhP" style="width: 115px; height: 30px; left: 25px; top: 12px; position: absolute; color: black; font-size: 16px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Đăng nhập</div>
+        </div>
+
+    }
+    @if (isLoggedIn)
+    {
+        <div data-layer="Logout" class="Logout" style="width: 140px; height: 48px; left: calc(100vw * 0.099); top: 30px; position: absolute; background: white; overflow: hidden; border-radius: 999px; cursor: pointer;" role="button" tabindex="0" onclick="window.location.href='/Auth/Logout';" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Auth/Logout';">
+          <div data-layer="Đăng xuất" class="NgXt" style="width: 115px; height: 30px; left: 15px; top: 12px; position: absolute; color: black; font-size: 16px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Đăng xuất</div>
+        </div>
+        <div data-layer="Username" class="Username" style="width: 200px; height: 48px; left: calc(100vw * 0.099); top: 97px; position: absolute; background: white; overflow: hidden; border-radius: 999px; display: flex; align-items: center; justify-content: center;">
+          <div data-layer="UsernameText" style="color: black; font-size: 16px; font-family: Poppins; font-weight: 600; word-wrap: break-word">👤 @username</div>
+        </div>
+    }
     <div data-layer="Home" class="Home" style="width: 96px; height: 96px; left: calc(100vw * 0.0125); top: 39px; position: absolute; cursor:pointer;" role="button" tabindex="0" onclick="window.location.href='/';" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/';">
       <div data-layer="Ellipse 1" class="Ellipse1" style="width: 96px; height: 96px; left: 0px; top: 0px; position: absolute; background: white; border-radius: 9999px"></div>
       <div data-layer="Home" class="Home" style="width: 72px; height: 67px; left: 12px; top: 15px; position: absolute; overflow: hidden">
@@ -106,3 +121,456 @@
     </div>
   </div>
 </div>
+
+<!-- Auth Modals -->
+<!-- Login Modal -->
+<div id="loginModal" class="auth-modal" style="display: none;">
+  <div class="auth-modal-content auth-modal-login">
+    <span class="auth-modal-close" onclick="closeLoginModal()">&times;</span>
+    <h2>Chào mừng đến với âm nhạc</h2>
+    <p class="subtitle">Đăng nhập để tiếp tục</p>
+
+    <div id="loginError" class="error-message" style="display: none;"></div>
+
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginEmail">E-mail hoặc tên người dùng</label>
+        <input type="text" id="loginEmail" name="Email" placeholder="Nhập email hoặc tên người dùng" required />
+      </div>
+
+      <div class="field">
+        <label for="loginPassword">Mật khẩu</label>
+        <input type="password" id="loginPassword" name="Password" placeholder="Nhập mật khẩu" required />
+      </div>
+
+      <button type="submit" id="loginSubmitBtn" class="primary-btn">Tiếp tục</button>
+    </form>
+
+    <div class="or-separator">Hoặc</div>
+
+    <button class="social-btn phone-btn" onclick="event.preventDefault(); alert('Đăng ký bằng số điện thoại');">
+      <span style="display:inline-flex;align-items:center;gap:8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 16.5C21 16.5 18 17.25 17.25 17.25C16.5 17.25 15.75 16.5 15.75 15.75C15.75 15 16.5 14.25 16.5 13.5C16.5 12.75 15.75 10.5 15.75 10.5C15.75 10.5 14.25 9 13.5 9C12.75 9 12 9.75 12 10.5C12 11.25 12.75 12.75 12.75 13.5C12.75 14.25 12 15 12 15C11.25 15.75 10.5 15.75 9.75 15.75C9 15.75 7.5 15 7.5 13.5C7.5 12 8.25 9.75 8.25 9.75C8.25 9.75 7.5 9 6.75 9C6 9 5.25 9.75 5.25 10.5C5.25 11.25 6 12.75 6 13.5C6 14.25 5.25 15 5.25 15C4.5 15.75 4.5 16.5 3.75 16.5C3 16.5 1.5 16.5 1.5 16.5" stroke="#152d31" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Đăng ký bằng số điện thoại</span>
+    </button>
+    <button class="social-btn fb-btn" onclick="event.preventDefault(); alert('Đăng ký bằng Facebook');">
+      <span style="display:inline-flex;align-items:center;gap:8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 12C22 6.48 17.52 2 12 2C6.48 2 2 6.48 2 12C2 17.02 5.66 21.13 10.44 21.88V14.89H7.9V12H10.44V9.84C10.44 7.33 11.93 5.9 14.2 5.9C15.25 5.9 16.34 6.1 16.34 6.1V8.58H15.01C13.7 8.58 13.38 9.29 13.38 10.02V12H16.2L15.79 14.89H13.38V21.88C18.16 21.13 22 17.02 22 12Z" fill="#0f3d5b"/></svg>Đăng ký bằng Facebook</span>
+    </button>
+
+    <p class="footer-text">Bạn đã có tài khoản ? <a href="#" onclick="switchToLogin()">Đăng nhập</a></p>
+  </div>
+</div>
+
+<!-- Register Modal -->
+<div id="registerModal" class="auth-modal" style="display: none;">
+  <div class="auth-modal-content auth-modal-login">
+    <span class="auth-modal-close" onclick="closeRegisterModal()">&times;</span>
+    <h2>Đăng ký</h2>
+    <p class="subtitle">Tạo tài khoản để bắt đầu khám phá âm nhạc</p>
+
+    <div id="registerError" class="error-message" style="display: none;"></div>
+
+    <form id="registerForm">
+      <div class="field">
+        <label for="registerEmail">Địa chỉ e-mail</label>
+        <input type="email" id="registerEmail" name="Email" placeholder="vd: name@domain.com" required />
+      </div>
+
+      <div class="field">
+        <label for="registerUsername">Tên người dùng</label>
+        <input type="text" id="registerUsername" name="Username" placeholder="Nhập tên người dùng" required />
+      </div>
+
+      <div class="field">
+        <label for="registerPassword">Mật khẩu</label>
+        <input type="password" id="registerPassword" name="Password" placeholder="Nhập mật khẩu" required />
+      </div>
+
+      <button type="submit" id="registerSubmitBtn" class="primary-btn">Tiếp tục</button>
+    </form>
+
+    <div class="or-separator">Hoặc</div>
+
+    <button class="social-btn phone-btn" onclick="event.preventDefault(); alert('Đăng ký bằng số điện thoại');">
+      <span style="display:inline-flex;align-items:center;gap:8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 16.5C21 16.5 18 17.25 17.25 17.25C16.5 17.25 15.75 16.5 15.75 15.75C15.75 15 16.5 14.25 16.5 13.5C16.5 12.75 15.75 10.5 15.75 10.5C15.75 10.5 14.25 9 13.5 9C12.75 9 12 9.75 12 10.5C12 11.25 12.75 12.75 12.75 13.5C12.75 14.25 12 15 12 15C11.25 15.75 10.5 15.75 9.75 15.75C9 15.75 7.5 15 7.5 13.5C7.5 12 8.25 9.75 8.25 9.75C8.25 9.75 7.5 9 6.75 9C6 9 5.25 9.75 5.25 10.5C5.25 11.25 6 12.75 6 13.5C6 14.25 5.25 15 5.25 15C4.5 15.75 4.5 16.5 3.75 16.5C3 16.5 1.5 16.5 1.5 16.5" stroke="#152d31" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Đăng ký bằng số điện thoại</span>
+    </button>
+    <button class="social-btn fb-btn" onclick="event.preventDefault(); alert('Đăng ký bằng Facebook');">
+      <span style="display:inline-flex;align-items:center;gap:8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 12C22 6.48 17.52 2 12 2C6.48 2 2 6.48 2 12C2 17.02 5.66 21.13 10.44 21.88V14.89H7.9V12H10.44V9.84C10.44 7.33 11.93 5.9 14.2 5.9C15.25 5.9 16.34 6.1 16.34 6.1V8.58H15.01C13.7 8.58 13.38 9.29 13.38 10.02V12H16.2L15.79 14.89H13.38V21.88C18.16 21.13 22 17.02 22 12Z" fill="#0f3d5b"/></svg>Đăng ký bằng Facebook</span>
+    </button>
+
+    <p class="footer-text">Bạn đã có tài khoản ? <a href="#" onclick="switchToLogin()">Đăng nhập</a></p>
+  </div>
+</div>
+
+<!-- Modal Styles -->
+<style>
+.auth-modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.auth-modal-content {
+  background-color: #2a2a2a;
+  padding: 40px 30px;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  width: 92%;
+  max-width: 380px;
+  position: relative;
+  animation: modalFadeIn 0.3s ease-out;
+  color: #f5f5f5;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.auth-modal-login h2 {
+  margin: 0 0 10px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 28px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.auth-modal-login .subtitle {
+  text-align: center;
+  margin-bottom: 24px;
+  color: #d0d0d0;
+}
+
+.auth-modal-login .field {
+  margin-bottom: 18px;
+}
+
+.auth-modal-login .field label {
+  display: block;
+  font-size: 13px;
+  color: #d0d0d0;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.auth-modal-login .field input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+}
+
+.auth-modal-login .field input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 25px;
+  background: linear-gradient(90deg, #ffaf26 0%, #ff7c31 100%);
+  color: #1a1a1a;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(255, 124, 49, 0.4);
+}
+
+.or-separator {
+  margin: 18px 0 12px;
+  text-align: center;
+  color: #c7c7c7;
+  font-size: 13px;
+}
+
+.social-btn {
+  width: 100%;
+  border: none;
+  border-radius: 25px;
+  padding: 11px;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phone-btn {
+  background: linear-gradient(90deg, #8affd9 0%, #70f2c7 100%);
+  color: #08262b;
+  padding: 10px 14px;
+  box-shadow: 0 4px 12px rgba(18, 129, 111, 0.26);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.phone-btn:hover {
+  filter: brightness(1.03);
+  transform: translateY(-1px);
+}
+
+.fb-btn {
+  background: linear-gradient(90deg, #8eccff 0%, #53b2ff 100%);
+  color: #063554;
+  padding: 10px 14px;
+  box-shadow: 0 4px 12px rgba(12, 84, 141, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.fb-btn:hover {
+  filter: brightness(1.03);
+  transform: translateY(-1px);
+}
+
+.footer-text {
+  margin-top: 15px;
+  text-align: center;
+  color: #d0d0d0;
+  font-size: 14px;
+}
+
+.footer-text a {
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+@@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.auth-modal-close {
+  position: absolute;
+  right: 20px;
+  top: 15px;
+  color: #aaa;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.auth-modal-close:hover {
+  color: #000;
+}
+
+.error-message {
+  color: #d32f2f;
+  padding: 10px;
+  background-color: #ffebee;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+
+</style>
+
+<!-- Modal JavaScript -->
+<script>
+console.log('Modal JavaScript loaded');
+
+// Initialize modal functionality when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing modal events');
+    
+    // Get button elements
+    const loginBtn = document.getElementById('loginBtn');
+    const registerBtn = document.getElementById('registerBtn');
+    
+    console.log('Login button found:', loginBtn);
+    console.log('Register button found:', registerBtn);
+    
+    // Add event listeners for modal buttons
+    if (loginBtn) {
+        loginBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Login button clicked');
+            openLoginModal();
+        });
+    }
+    
+    if (registerBtn) {
+        registerBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Register button clicked');
+            openRegisterModal();
+        });
+    }
+
+    // Handle login form submission
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const loginSubmitBtn = document.querySelector('#loginModal button[type="submit"]');
+            const originalText = loginSubmitBtn.textContent;
+            loginSubmitBtn.textContent = 'Đang xử lý...';
+            loginSubmitBtn.disabled = true;
+            
+            const formData = new FormData(this);
+            
+            fetch('/Auth/Login', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    document.getElementById('loginError').textContent = data.message || 'Đăng nhập thất bại!';
+                    document.getElementById('loginError').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                document.getElementById('loginError').textContent = 'Có lỗi xảy ra. Vui lòng thử lại!';
+                document.getElementById('loginError').style.display = 'block';
+            })
+            .finally(() => {
+                loginSubmitBtn.textContent = originalText;
+                loginSubmitBtn.disabled = false;
+            });
+        });
+    }
+
+    // Handle register form submission
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                document.getElementById('registerError').textContent = 'Mật khẩu không khớp!';
+                document.getElementById('registerError').style.display = 'block';
+                return;
+            }
+            
+            const registerSubmitBtn = document.querySelector('#registerModal button[type="submit"]');
+            const originalText = registerSubmitBtn.textContent;
+            registerSubmitBtn.textContent = 'Đang xử lý...';
+            registerSubmitBtn.disabled = true;
+            
+            const formData = new FormData(this);
+            
+            fetch('/Auth/Register', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    document.getElementById('registerError').textContent = data.message || 'Đăng ký thất bại!';
+                    document.getElementById('registerError').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                document.getElementById('registerError').textContent = 'Có lỗi xảy ra. Vui lòng thử lại!';
+                document.getElementById('registerError').style.display = 'block';
+            })
+            .finally(() => {
+                registerSubmitBtn.textContent = originalText;
+                registerSubmitBtn.disabled = false;
+            });
+        });
+    }
+});
+
+function openLoginModal() {
+  console.log('openLoginModal function called');
+  const modal = document.getElementById('loginModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    console.log('Login modal displayed');
+    document.getElementById('loginError').style.display = 'none';
+    document.getElementById('loginForm').reset();
+  } else {
+    console.error('Login modal not found');
+  }
+}
+
+function closeLoginModal() {
+  console.log('closeLoginModal function called');
+  const modal = document.getElementById('loginModal');
+  if (modal) {
+    modal.style.display = 'none';
+    console.log('Login modal hidden');
+  }
+}
+
+function openRegisterModal() {
+  console.log('openRegisterModal function called');
+  const modal = document.getElementById('registerModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    console.log('Register modal displayed');
+    document.getElementById('registerError').style.display = 'none';
+    document.getElementById('registerForm').reset();
+  } else {
+    console.error('Register modal not found');
+  }
+}
+
+function closeRegisterModal() {
+  console.log('closeRegisterModal function called');
+  const modal = document.getElementById('registerModal');
+  if (modal) {
+    modal.style.display = 'none';
+    console.log('Register modal hidden');
+  }
+}
+
+function switchToRegister() {
+  console.log('switchToRegister called');
+  closeLoginModal();
+  openRegisterModal();
+}
+
+function switchToLogin() {
+  console.log('switchToLogin called');
+  closeRegisterModal();
+  openLoginModal();
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+  const loginModal = document.getElementById('loginModal');
+  const registerModal = document.getElementById('registerModal');
+  
+  if (event.target === loginModal) {
+    closeLoginModal();
+  }
+  if (event.target === registerModal) {
+    closeRegisterModal();
+  }
+}
+
+
+</script>
