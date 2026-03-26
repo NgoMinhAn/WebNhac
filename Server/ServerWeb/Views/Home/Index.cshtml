@@ -1,8 +1,108 @@
 ﻿@{
     ViewData["Title"] = "Home Page";
 }
-
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div data-layer="Main Web" class="MainWeb" style="width: 100vw; height: 100vh; position: relative; background: #AAAAAA; overflow: hidden">
+  <div data-layer="Content" class="Content" style="width: calc(100vw * 0.784); height: calc(100vh - calc(100vh * 0.1924)); left: calc(100vw * 0.216); top: calc(100vh * 0.1924); position: absolute; background: linear-gradient(180deg, rgba(33.05, 113.66, 212.19, 0.50) 37%, rgba(18.50, 47.70, 91.50, 0.50) 100%)"></div>
+  <div data-layer="Sidebar" class="Sidebar" style="width: calc(100vw * 0.216); height: calc(100vh - calc(100vh * 0.1924)); left: 0px; top: calc(100vh * 0.1924); position: absolute; overflow: hidden">
+    <div data-layer="SidebarBG" class="Sidebarbg" style="width: calc(100vw * 0.215); height: calc(calc(100vh - calc(100vh * 0.1924)) + 2px); left: 0px; top: 0px; position: absolute; background: linear-gradient(180deg, #818181 0%, #090D4C 100%)"></div>
+    <div data-layer="TaoPlaylist" class="Taoplaylist" style="width: 242px; height: 48px; left: 9%; top: 90%; position: absolute; background: white; overflow: hidden; border-radius: 999px; cursor: pointer;" role="button" tabindex="0" onclick="window.location.href='/Playlist/Create';" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Playlist/Create';">
+      <div data-layer="Tạo playlist mới" class="TOPlaylistMI" style="width: 157px; height: 35px; left: 28.1%; top: 9px; position: absolute; color: black; font-size: 18px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Tạo playlist mới</div>
+      <div data-svg-wrapper data-layer="Music" class="Music" style="left: 9.5%; top: 13px; position: absolute">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8.25 16.5V4.58333L19.25 2.75V14.6667M8.25 16.5C8.25 18.0188 7.01878 19.25 5.5 19.25C3.98122 19.25 2.75 18.0188 2.75 16.5C2.75 14.9812 3.98122 13.75 5.5 13.75C7.01878 13.75 8.25 14.9812 8.25 16.5ZM19.25 14.6667C19.25 16.1854 18.0188 17.4167 16.5 17.4167C14.9812 17.4167 13.75 16.1854 13.75 14.6667C13.75 13.1479 14.9812 11.9167 16.5 11.9167C18.0188 11.9167 19.25 13.1479 19.25 14.6667Z" stroke="var(--Icon-Default-Default, #1E1E1E)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+    <div data-layer="ThuVien" class="Thuvien" style="width: 122px; height: 53px; left: 8.36%; top: 4.6%; position: absolute; cursor: pointer;" role="button" tabindex="0" onclick="window.location.href='/Library';" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Library';">
+      <div data-layer="Thư viện" class="ThViN" style="left: 11px; top: 15px; position: absolute; justify-content: center; display: flex; flex-direction: column; color: white; font-size: 28px; font-family: Roboto; font-weight: 400; line-height: 24px; letter-spacing: 0.50px; word-wrap: break-word">Thư viện</div>
+      <div data-layer="Line 2" class="Line2" style="width: 53px; height: 0px; left: 0px; top: 0px; position: absolute; transform: rotate(90deg); transform-origin: top left; outline: 1px white solid; outline-offset: -0.50px"></div>
+    </div>
+    <div data-layer="KhamPha" class="Khampha" style="width: 141px; height: 53px; left: 8.36%; top: 13.9%; position: absolute; cursor: pointer;" role="button" tabindex="0" onclick="window.location.href='/Explore';" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Explore';">
+      <div data-layer="Khám phá" class="KhMPh" style="left: 11px; top: 15px; position: absolute; justify-content: center; display: flex; flex-direction: column; color: white; font-size: 28px; font-family: Roboto; font-weight: 400; line-height: 24px; letter-spacing: 0.50px; word-wrap: break-word">Khám phá</div>
+      <div data-layer="Line 3" class="Line3" style="width: 53px; height: 0px; left: 0px; top: 0px; position: absolute; transform: rotate(90deg); transform-origin: top left; outline: 1px white solid; outline-offset: -0.50px"></div>
+    </div>
+    <div data-layer="DanhSach" class="Danhsach" style="width: 212px; height: 53px; left: 8.36%; top: 23.7%; position: absolute; cursor: pointer;" role="button" tabindex="0" onclick="window.location.href='/Playlists';" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Playlists';">
+      <div data-layer="Danh sách phát" class="DanhSChPhT" style="left: 11px; top: 15px; position: absolute; justify-content: center; display: flex; flex-direction: column; color: white; font-size: 28px; font-family: Roboto; font-weight: 400; line-height: 24px; letter-spacing: 0.50px; word-wrap: break-word">Danh sách phát</div>
+      <div data-layer="Line 4" class="Line4" style="width: 53px; height: 0px; left: 0px; top: 0px; position: absolute; transform: rotate(90deg); transform-origin: top left; outline: 1px white solid; outline-offset: -0.50px"></div>
+    </div>
+  </div>
+  <div data-layer="Header" class="Header" style="width: 100vw; height: calc(100vh * 0.1924); left: 0px; top: 0px; position: absolute; overflow: hidden">
+    <div data-layer="HeaderBG" class="Headerbg" style="width: 100vw; height: calc(100vh * 0.1953); left: 0px; top: 0px; position: absolute; background: linear-gradient(0deg, #AFA7A7 0%, #272837 100%)"></div>
+    <div data-layer="Search bar" data-show-1st-trailing-icon="true" data-show-2nd-trailing-icon="false" data-show-avatar="False" data-show-leading-icon="true" data-state="Enabled" class="SearchBar" style="width: 50vw; height: 55px; max-width: 720px; left: calc(100vw * 0.235); top: 57px; position: absolute; background: var(--Schemes-Surface-Container-High, #ECE6F0); overflow: hidden; border-radius: 28px; justify-content: flex-start; align-items: center; gap: 4px; display: inline-flex">
+      <div data-layer="state-layer" class="StateLayer" style="flex: 1 1 0; align-self: stretch; padding: 4px; position: relative; justify-content: flex-start; align-items: center; display: flex">
+        <div data-layer="Leading-icon" data-show-focus-indicator="false" data-size="Small" data-state="Enabled" data-type="Round" data-width="Default" class="LeadingIcon" style="width: 48px; height: 48px; justify-content: center; align-items: center; display: flex">
+          <div data-layer="Content" class="Content" style="width: 40px; overflow: hidden; border-radius: 100px; flex-direction: column; justify-content: center; align-items: center; display: inline-flex">
+            <div data-layer="State-layer" class="StateLayer" style="align-self: stretch; height: 40px; justify-content: center; align-items: center; display: inline-flex">
+              <div data-svg-wrapper data-layer="Icon" class="Icon" style="position: relative">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 18V16H21V18H3ZM3 13V11H21V13H3ZM3 8V6H21V8H3Z" fill="var(--Schemes-On-Surface-Variant, #49454F)"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div data-layer="Content" class="Content" style="flex: 1 1 0; align-self: stretch; padding-left: 20px; padding-right: 20px; justify-content: flex-start; align-items: center; gap: 10px; display: flex">
+          <div data-layer="supporting-text" class="SupportingText" style="justify-content: center; display: flex; flex-direction: column; color: var(--Schemes-On-Surface-Variant, #49454F); font-size: 16px; font-family: Roboto; font-weight: 400; line-height: 24px; letter-spacing: 0.50px; word-wrap: break-word">Tìm kiếm nội dung (vd: Bài hát, lời bài hát, nghệ sĩ,...)</div>
+        </div>
+        <div data-layer="Trailing-Elements" class="TrailingElements" style="left: calc(100% - 52px); top: 4px; position: absolute; justify-content: flex-end; align-items: center; display: flex">
+          <div data-layer="1st trailing-icon" data-show-focus-indicator="false" data-size="Small" data-state="Enabled" data-type="Round" data-width="Default" class="StTrailingIcon" style="width: 48px; height: 48px; justify-content: center; align-items: center; display: flex">
+            <div data-layer="Content" class="Content" style="width: 40px; overflow: hidden; border-radius: 100px; flex-direction: column; justify-content: center; align-items: center; display: inline-flex">
+              <div data-layer="State-layer" class="StateLayer" style="align-self: stretch; height: 40px; justify-content: center; align-items: center; display: inline-flex">
+                <div data-svg-wrapper data-layer="Icon" class="Icon" style="position: relative">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M19.6 21L13.3 14.7C12.8 15.1 12.225 15.4167 11.575 15.65C10.925 15.8833 10.2333 16 9.5 16C7.68333 16 6.14583 15.3708 4.8875 14.1125C3.62917 12.8542 3 11.3167 3 9.5C3 7.68333 3.62917 6.14583 4.8875 4.8875C6.14583 3.62917 7.68333 3 9.5 3C11.3167 3 12.8542 3.62917 14.1125 4.8875C15.3708 6.14583 16 7.68333 16 9.5C16 10.2333 15.8833 10.925 15.65 11.575C15.4167 12.225 15.1 12.8 14.7 13.3L21 19.6L19.6 21ZM9.5 14C10.75 14 11.8125 13.5625 12.6875 12.6875C13.5625 11.8125 14 10.75 14 9.5C14 8.25 13.5625 7.1875 12.6875 6.3125C11.8125 5.4375 10.75 5 9.5 5C8.25 5 7.1875 5.4375 6.3125 6.3125C5.4375 7.1875 5 8.25 5 9.5C5 10.75 5.4375 11.8125 6.3125 12.6875C7.1875 13.5625 8.25 14 9.5 14Z" fill="var(--Schemes-On-Surface-Variant, #49454F)"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div data-layer="Sign Up" class="SignUp" style="width: 140px; height: 48px; left: calc(100vw * 0.099); top: 97px; position: absolute; background: white; overflow: hidden; border-radius: 999px; cursor: pointer;" role="button" tabindex="0" onclick="window.location.href='/Identity/Account/Register';" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Identity/Account/Register';">
+      <div data-layer="Đăng ký" class="NgK" style="width: 67px; height: 21px; left: 37px; top: 13px; position: absolute; color: black; font-size: 16px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Đăng ký</div>
+    </div>
+    <div data-layer="Login" class="Login" style="width: 140px; height: 48px; left: calc(100vw * 0.099); top: 30px; position: absolute; background: white; overflow: hidden; border-radius: 999px; cursor: pointer;" role="button" tabindex="0" onclick="window.location.href='/Identity/Account/Login';" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Identity/Account/Login';">
+      <div data-layer="Đăng nhập" class="NgNhP" style="width: 115px; height: 30px; left: 25px; top: 12px; position: absolute; color: black; font-size: 16px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Đăng nhập</div>
+    </div>
+    <div data-layer="Home" class="Home" style="width: 96px; height: 96px; left: calc(100vw * 0.0125); top: 39px; position: absolute; cursor:pointer;" role="button" tabindex="0" onclick="window.location.href='/';" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/';">
+      <div data-layer="Ellipse 1" class="Ellipse1" style="width: 96px; height: 96px; left: 0px; top: 0px; position: absolute; background: white; border-radius: 9999px"></div>
+      <div data-layer="Home" class="Home" style="width: 72px; height: 67px; left: 12px; top: 15px; position: absolute; overflow: hidden">
+        <div data-svg-wrapper data-layer="Icon" class="Icon" style="left: 9px; top: 5.58px; position: absolute">
+          <svg width="58" height="60" viewBox="0 0 58 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19.75 57.5833V29.6667H37.75V57.5833M1.75 21.2917L28.75 1.75L55.75 21.2917V52C55.75 53.4808 55.1179 54.9009 53.9926 55.948C52.8674 56.9951 51.3413 57.5833 49.75 57.5833H7.75C6.1587 57.5833 4.63258 56.9951 3.50736 55.948C2.38214 54.9009 1.75 53.4808 1.75 52V21.2917Z" stroke="var(--Icon-Default-Default, #1E1E1E)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div data-svg-wrapper data-layer="Seperator" class="Seperator" style="left: calc(100vw * 0.215); top: 8px; position: absolute">
+      <svg width="1" height="187" viewBox="0 0 1 187" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0.5 0L0.5 186.5" stroke="black"/>
+      </svg>
+    </div>
+    <div data-layer="User" class="User" style="width: 70px; height: 70px; left: calc(100vw * 0.854); top: 35px; position: absolute; cursor: pointer;" role="button" tabindex="0" onclick="window.location.href='/User/Profile';" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/User/Profile';">
+      <div data-layer="Ellipse 2" class="Ellipse2" style="width: 70px; height: 70px; left: 0px; top: 0px; position: absolute; background: #D9D9D9; border-radius: 9999px"></div>
+      <div data-svg-wrapper data-layer="User" class="User" style="left: 15px; top: 15px; position: absolute">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M33.3334 35V31.6667C33.3334 29.8986 32.631 28.2029 31.3807 26.9526C30.1305 25.7024 28.4348 25 26.6667 25H13.3334C11.5652 25 9.86955 25.7024 8.61931 26.9526C7.36907 28.2029 6.66669 29.8986 6.66669 31.6667V35M26.6667 11.6667C26.6667 15.3486 23.6819 18.3333 20 18.3333C16.3181 18.3333 13.3334 15.3486 13.3334 11.6667C13.3334 7.98477 16.3181 5 20 5C23.6819 5 26.6667 7.98477 26.6667 11.6667Z" stroke="#278D49" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+    <div data-layer="Settings" class="Settings" style="width: 70px; height: 70px; left: calc(100vw * 0.923); top: 35px; position: absolute; cursor: pointer;" role="button" tabindex="0" onclick="window.location.href='/Settings';" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Settings';">
+      <div data-layer="Ellipse 3" class="Ellipse3" style="width: 70px; height: 70px; left: 0px; top: 0px; position: absolute; background: #D9D9D9; border-radius: 9999px"></div>
+      <div data-svg-wrapper data-layer="Settings" class="Settings" style="left: 15px; top: 17px; position: absolute">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g clip-path="url(#clip0_66_138)">
+        <path d="M20 25.0001C22.7614 25.0001 25 22.7615 25 20.0001C25 17.2387 22.7614 15.0001 20 15.0001C17.2386 15.0001 15 17.2387 15 20.0001C15 22.7615 17.2386 25.0001 20 25.0001Z" stroke="var(--Icon-Default-Default, #1E1E1E)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32.3334 25.0001C32.1115 25.5028 32.0453 26.0604 32.1433 26.6011C32.2414 27.1417 32.4991 27.6406 32.8834 28.0334L32.9834 28.1334C33.2933 28.443 33.5391 28.8106 33.7069 29.2153C33.8746 29.6199 33.961 30.0537 33.961 30.4917C33.961 30.9298 33.8746 31.3636 33.7069 31.7682C33.5391 32.1729 33.2933 32.5405 32.9834 32.8501C32.6738 33.16 32.3061 33.4059 31.9015 33.5736C31.4968 33.7414 31.0631 33.8277 30.625 33.8277C30.187 33.8277 29.7532 33.7414 29.3486 33.5736C28.9439 33.4059 28.5763 33.16 28.2667 32.8501L28.1667 32.7501C27.7739 32.3659 27.275 32.1081 26.7343 32.0101C26.1937 31.912 25.636 31.9782 25.1334 32.2001C24.6404 32.4114 24.22 32.7622 23.9239 33.2093C23.6277 33.6565 23.4688 34.1804 23.4667 34.7167V35.0001C23.4667 35.8841 23.1155 36.732 22.4904 37.3571C21.8653 37.9822 21.0174 38.3334 20.1334 38.3334C19.2493 38.3334 18.4015 37.9822 17.7763 37.3571C17.1512 36.732 16.8 35.8841 16.8 35.0001V34.8501C16.7871 34.2984 16.6086 33.7634 16.2875 33.3146C15.9665 32.8658 15.5179 32.5239 15 32.3334C14.4973 32.1116 13.9397 32.0454 13.399 32.1434C12.8584 32.2414 12.3595 32.4992 11.9667 32.8834L11.8667 32.9834C11.5571 33.2933 11.1895 33.5392 10.7848 33.7069C10.3802 33.8747 9.94641 33.961 9.50835 33.961C9.0703 33.961 8.63655 33.8747 8.23189 33.7069C7.82723 33.5392 7.4596 33.2933 7.15002 32.9834C6.8401 32.6738 6.59424 32.3062 6.42649 31.9016C6.25874 31.4969 6.1724 31.0631 6.1724 30.6251C6.1724 30.187 6.25874 29.7533 6.42649 29.3486C6.59424 28.944 6.8401 28.5763 7.15002 28.2667L7.25002 28.1667C7.63425 27.774 7.892 27.2751 7.99003 26.7344C8.08806 26.1937 8.02188 25.6361 7.80002 25.1334C7.58875 24.6405 7.23795 24.2201 6.7908 23.9239C6.34365 23.6278 5.81966 23.4689 5.28335 23.4667H5.00002C4.11597 23.4667 3.26812 23.1156 2.643 22.4904C2.01788 21.8653 1.66669 21.0175 1.66669 20.1334C1.66669 19.2494 2.01788 18.4015 2.643 17.7764C3.26812 17.1513 4.11597 16.8001 5.00002 16.8001H5.15002C5.70168 16.7872 6.2367 16.6086 6.68552 16.2876C7.13434 15.9666 7.47621 15.518 7.66669 15.0001C7.88855 14.4974 7.95473 13.9398 7.85669 13.3991C7.75866 12.8584 7.50092 12.3595 7.11669 11.9667L7.01669 11.8667C6.70677 11.5572 6.4609 11.1895 6.29315 10.7849C6.12541 10.3802 6.03907 9.94647 6.03907 9.50841C6.03907 9.07036 6.12541 8.63661 6.29315 8.23195C6.4609 7.82729 6.70677 7.45966 7.01669 7.15008C7.32626 6.84016 7.69389 6.5943 8.09855 6.42655C8.50321 6.2588 8.93697 6.17246 9.37502 6.17246C9.81307 6.17246 10.2468 6.2588 10.6515 6.42655C11.0561 6.5943 11.4238 6.84016 11.7334 7.15008L11.8334 7.25008C12.2262 7.63431 12.725 7.89206 13.2657 7.99009C13.8064 8.08812 14.364 8.02194 14.8667 7.80008H15C15.493 7.58881 15.9134 7.23801 16.2095 6.79086C16.5056 6.34371 16.6645 5.81973 16.6667 5.28342V5.00008C16.6667 4.11603 17.0179 3.26818 17.643 2.64306C18.2681 2.01794 19.116 1.66675 20 1.66675C20.8841 1.66675 21.7319 2.01794 22.357 2.64306C22.9822 3.26818 23.3334 4.11603 23.3334 5.00008V5.15008C23.3355 5.68639 23.4944 6.21037 23.7905 6.65752C24.0867 7.10467 24.5071 7.45548 25 7.66675C25.5027 7.88861 26.0603 7.95479 26.601 7.85676C27.1417 7.75872 27.6406 7.50098 28.0334 7.11675L28.1334 7.01675C28.4429 6.70683 28.8106 6.46096 29.2152 6.29322C29.6199 6.12547 30.0536 6.03913 30.4917 6.03913C30.9297 6.03913 31.3635 6.12547 31.7682 6.29322C32.1728 6.46096 32.5404 6.70683 32.85 7.01675C33.1599 7.32633 33.4058 7.69395 33.5736 8.09861C33.7413 8.50327 33.8276 8.93703 33.8276 9.37508C33.8276 9.81313 33.7413 10.2469 33.5736 10.6515C33.4058 11.0562 33.1599 11.4238 32.85 11.7334L32.75 11.8334C32.3658 12.2262 32.108 12.7251 32.01 13.2658C31.912 13.8064 31.9782 14.3641 32.2 14.8667V15.0001C32.4113 15.493 32.7621 15.9134 33.2092 16.2096C33.6564 16.5057 34.1804 16.6646 34.7167 16.6667H35C35.8841 16.6667 36.7319 17.0179 37.357 17.6431C37.9822 18.2682 38.3334 19.116 38.3334 20.0001C38.3334 20.8841 37.9822 21.732 37.357 22.3571C36.7319 22.9822 35.8841 23.3334 35 23.3334H34.85C34.3137 23.3356 33.7897 23.4945 33.3426 23.7906C32.8954 24.0867 32.5446 24.5071 32.3334 25.0001Z" stroke="var(--Icon-Default-Default, #1E1E1E)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <defs>
+        <clipPath id="clip0_66_138">
+        <rect width="40" height="40" fill="white"/>
+        </clipPath>
+        </defs>
+        </svg>
+      </div>
+    </div>
+  </div>
 </div>

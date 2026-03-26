@@ -13,6 +13,6 @@ namespace ServerWeb.Models
         [Required]
         public int UserId { get; set; }
 
-        public List<PlaylistSong> PlaylistSongs { get; set; } = new();
+        public List<PlaylistSong> PlaylistSongs { get; set; }
     }
 }

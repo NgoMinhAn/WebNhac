@@ -10,15 +10,15 @@ namespace ServerWeb.Pages
     public class UploadSongModel : PageModel
     {
         [BindProperty]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         [BindProperty]
-        public string Author { get; set; }
+        public string Author { get; set; } = string.Empty;
 
         [BindProperty]
-        public IFormFile File { get; set; }
+        public IFormFile UploadedFile { get; set; } = default!;
 
-        public string Message { get; set; }
+        public string Message { get; set; } = string.Empty;
 
         public async Task<IActionResult> OnPostAsync()
         {
@@ -28,20 +28,17 @@ namespace ServerWeb.Pages
                 return Page();
             }
 
-            if (File != null && File.Length > 0)
+            if (UploadedFile != null && UploadedFile.Length > 0)
             {
                 var musicFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Music");
                 Directory.CreateDirectory(musicFolder);
 
-                var filePath = Path.Combine(musicFolder, File.FileName);
+                var filePath = Path.Combine(musicFolder, UploadedFile.FileName);
 
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
-                    await File.CopyToAsync(stream);
+                    await UploadedFile.CopyToAsync(stream);
                 }
-
-                // Save song details to database (if applicable)
-                // Example: Save to a list or database context
 
                 Message = "Song uploaded successfully.";
             }
