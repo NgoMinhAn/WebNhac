@@ -1,0 +1,87 @@
+@{
+    ViewData["Title"] = "Admin";
+}
+
+<div data-layer="Admin" class="Admin" style="width: 100vw; height: 100vh; position: relative; background: #AAAAAA; overflow: hidden">
+  <div data-layer="Content" class="Content" style="width: calc(100vw * 0.786); height: calc(100vh - calc(100vh * 0.198)); left: calc(100vw * 0.216); top: calc(100vh * 0.198); position: absolute; background: #272837; overflow: hidden">
+    <div data-layer="Rectangle 32" class="Rectangle32" style="width: 228px; height: 59px; left: 30px; top: 19px; position: absolute; background: #FFA64C; border-radius: 100px"></div>
+    <div data-layer="+ Thêm bài hát" class="ThMBIHT" role="button" tabindex="0" onclick="window.location.href='/Song/Create'" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Song/Create'" style="cursor: pointer; width: 234px; height: 38px; left: 45px; top: 30px; position: absolute; color: black; font-size: 25px; font-family: Poppins; font-weight: 600; word-wrap: break-word">+ Thêm bài hát</div>
+    <div data-layer="Management" class="Management" style="width: 1071px; height: 715px; left: 44px; top: 93px; position: absolute; overflow: hidden">
+      <div data-layer="ManagementBG" class="Managementbg" style="width: 1070px; height: 719px; left: 1px; top: -4px; position: absolute; background: #4F4F4F; border-radius: 20px"></div>
+      <div data-layer="Rectangle 34" class="Rectangle34" style="width: 1016px; height: 50px; left: 28px; top: 9px; position: absolute; background: #818181; border-radius: 30px"></div>
+      <div data-layer="1st trailing-icon" data-show-focus-indicator="false" data-size="Small" data-state="Enabled" data-type="Round" data-width="Default" class="StTrailingIcon" style="width: 48px; height: 48px; left: 36px; top: 10px; position: absolute; justify-content: center; align-items: center; display: inline-flex">
+        <div data-layer="Content" class="Content" style="width: 40px; overflow: hidden; border-radius: 100px; flex-direction: column; justify-content: center; align-items: center; display: inline-flex">
+          <div data-layer="State-layer" class="StateLayer" style="align-self: stretch; height: 40px; justify-content: center; align-items: center; display: inline-flex">
+            <div data-svg-wrapper data-layer="Icon" class="Icon" style="position: relative">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19.6 21L13.3 14.7C12.8 15.1 12.225 15.4167 11.575 15.65C10.925 15.8833 10.2333 16 9.5 16C7.68333 16 6.14583 15.3708 4.8875 14.1125C3.62917 12.8542 3 11.3167 3 9.5C3 7.68333 3.62917 6.14583 4.8875 4.8875C6.14583 3.62917 7.68333 3 9.5 3C11.3167 3 12.8542 3.62917 14.1125 4.8875C15.3708 6.14583 16 7.68333 16 9.5C16 10.2333 15.8833 10.925 15.65 11.575C15.4167 12.225 15.1 12.8 14.7 13.3L21 19.6L19.6 21ZM9.5 14C10.75 14 11.8125 13.5625 12.6875 12.6875C13.5625 11.8125 14 10.75 14 9.5C14 8.25 13.5625 7.1875 12.6875 6.3125C11.8125 5.4375 10.75 5 9.5 5C8.25 5 7.1875 5.4375 6.3125 6.3125C5.4375 7.1875 5 8.25 5 9.5C5 10.75 5.4375 11.8125 6.3125 12.6875C7.1875 13.5625 8.25 14 9.5 14Z" fill="var(--Schemes-On-Surface-Variant, #49454F)"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-layer="Tìm kiếm bài hát..." class="TMKiMBIHT" style="left: 84px; top: 15px; position: absolute; color: #49454F; font-size: 25px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Tìm kiếm bài hát...</div>
+      <div data-layer="Seperator" class="Seperator" style="width: 1069px; height: 0px; left: 2px; top: 74px; position: absolute; outline: 1px white solid; outline-offset: -0.50px"></div>
+      <div data-layer="Ảnh" class="Nh" style="left: 26px; top: 89px; position: absolute; color: white; font-size: 20px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Ảnh</div>
+      <div data-layer="Tên bài hát" class="TNBIHT" style="left: 143px; top: 89px; position: absolute; color: white; font-size: 20px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Tên bài hát</div>
+      <div data-layer="Nghệ sĩ" class="NghS" style="left: 381px; top: 89px; position: absolute; color: white; font-size: 20px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Nghệ sĩ</div>
+      <div data-layer="Album" class="Album" style="left: 562px; top: 89px; position: absolute; color: white; font-size: 20px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Album</div>
+      <div data-layer="Thể loại" class="ThLoI" style="left: 717px; top: 89px; position: absolute; color: white; font-size: 20px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Thể loại</div>
+      <div data-layer="Thời lượng" class="ThILNg" style="left: 850px; top: 89px; position: absolute; color: white; font-size: 20px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Thời lượng</div>
+    </div>
+  </div>
+  <div data-layer="Header" class="Header" style="width: 100vw; height: calc(100vh * 0.198); left: 0px; top: 0px; position: absolute; overflow: hidden">
+    <div data-layer="Rectangle 28" class="Rectangle28" style="width: 100vw; height: calc(100vh * 0.198); left: 0px; top: 0px; position: absolute; background: linear-gradient(0deg, #AFA7A7 0%, #272837 100%)"></div>
+    <div data-layer="Rectangle 29" class="Rectangle29" style="width: 100vw; height: calc(100vh * 0.198); left: 0px; top: 0px; position: absolute; background: linear-gradient(0deg, #AFA7A7 0%, #272837 100%)"></div>
+    <div data-layer="Home Button" class="HomeButton" role="button" tabindex="0" onclick="window.location.href='/'" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/'" style="cursor: pointer; width: 96px; height: 96px; left: calc(100vw * 0.0125); top: calc(100vh * 0.038); position: absolute">
+      <div data-layer="Ellipse 1" class="Ellipse1" style="width: 96px; height: 96px; left: 0px; top: 0px; position: absolute; background: white; border-radius: 9999px"></div>
+      <div data-layer="Home" class="Home" style="width: 72px; height: 67px; left: 12px; top: 14px; position: absolute; overflow: hidden">
+        <div data-svg-wrapper data-layer="Icon" class="Icon" style="left: 9px; top: 5.58px; position: absolute">
+          <svg width="58" height="60" viewBox="0 0 58 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M37.75 57.5833V29.6667H19.75V57.5833M55.75 21.2917L28.75 1.75L1.75 21.2917V52C1.75 53.4808 2.38215 54.9009 3.50736 55.948C4.63258 56.9951 6.1587 57.5833 7.75 57.5833H49.75C51.3413 57.5833 52.8674 56.9951 53.9926 55.948C55.1179 54.9009 55.75 53.4808 55.75 52V21.2917Z" stroke="var(--Icon-Default-Default, #1E1E1E)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div data-svg-wrapper data-layer="Seperator" class="Seperator" style="left: calc(100vw * 0.216); top: 8px; position: absolute">
+      <svg width="1" height="calc(100vh * 0.183)" viewBox="0 0 1 calc(100vh * 0.183)" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0.5 0L0.5 calc(100vh * 0.183)" stroke="black"/>
+      </svg>
+    </div>
+    <div data-layer="Ellipse 4" class="Ellipse4" style="width: 70px; height: 70px; left: 1317px; top: 67px; position: absolute; background: #D9D9D9; border-radius: 9999px"></div>
+    <div data-svg-wrapper data-layer="User" class="User" style="left: 1332px; top: 82px; position: absolute">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M33.3333 35V31.6667C33.3333 29.8986 32.6309 28.2029 31.3807 26.9526C30.1304 25.7024 28.4347 25 26.6666 25H13.3333C11.5652 25 9.86949 25.7024 8.61925 26.9526C7.369 28.2029 6.66663 29.8986 6.66663 31.6667V35M26.6666 11.6667C26.6666 15.3486 23.6819 18.3333 20 18.3333C16.3181 18.3333 13.3333 15.3486 13.3333 11.6667C13.3333 7.98477 16.3181 5 20 5C23.6819 5 26.6666 7.98477 26.6666 11.6667Z" stroke="#278D49" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div data-layer="Quản lý nhạc" class="QuNLNhC" style="width: 256px; height: 35px; left: 432px; top: 81px; position: absolute; color: white; font-size: 30px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Quản lý nhạc</div>
+    <div data-svg-wrapper data-layer="Music" class="Music" style="left: 363px; top: 74px; position: absolute">
+      <svg width="60" height="56" viewBox="0 0 60 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.5 42V11.6667L52.5 7V37.3333M22.5 42C22.5 45.866 19.1421 49 15 49C10.8579 49 7.5 45.866 7.5 42C7.5 38.134 10.8579 35 15 35C19.1421 35 22.5 38.134 22.5 42ZM52.5 37.3333C52.5 41.1993 49.1421 44.3333 45 44.3333C40.8579 44.3333 37.5 41.1993 37.5 37.3333C37.5 33.4673 40.8579 30.3333 45 30.3333C49.1421 30.3333 52.5 33.4673 52.5 37.3333Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+  <div data-layer="Sidebar" class="Sidebar" style="width: calc(100vw * 0.216); height: calc(100vh - calc(100vh * 0.198)); left: 0px; top: calc(100vh * 0.198); position: absolute; overflow: hidden">
+    <div data-layer="SidebarBG" class="Sidebarbg" style="width: calc(100vw * 0.215); height: calc(100vh - calc(100vh * 0.198)); left: 0px; top: 0px; position: absolute; background: linear-gradient(180deg, #818181 0%, #090D4C 100%)"></div>
+    <div data-layer="TaoPlaylistButton" class="Taoplaylistbutton" style="width: 242px; height: 48px; left: 28px; top: 735px; position: absolute; background: white; overflow: hidden; border-radius: 999px">
+      <div data-layer="Tạo playlist mới" class="TOPlaylistMI" style="width: 157px; height: 35px; left: 68px; top: 9px; position: absolute; color: black; font-size: 18px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Tạo playlist mới</div>
+      <div data-svg-wrapper data-layer="Music" class="Music" style="left: 23px; top: 13px; position: absolute">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8.25 16.5V4.58333L19.25 2.75V14.6667M8.25 16.5C8.25 18.0188 7.01878 19.25 5.5 19.25C3.98122 19.25 2.75 18.0188 2.75 16.5C2.75 14.9812 3.98122 13.75 5.5 13.75C7.01878 13.75 8.25 14.9812 8.25 16.5ZM19.25 14.6667C19.25 16.1854 18.0188 17.4167 16.5 17.4167C14.9812 17.4167 13.75 16.1854 13.75 14.6667C13.75 13.1479 14.9812 11.9167 16.5 11.9167C18.0188 11.9167 19.25 13.1479 19.25 14.6667Z" stroke="var(--Icon-Default-Default, #1E1E1E)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+    <div data-layer="ThuVien" class="Thuvien" role="button" tabindex="0" onclick="window.location.href='/Library'" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Library'" style="cursor: pointer; width: 122px; height: 53px; left: 26px; top: 29px; position: absolute">
+      <div data-layer="Thư viện" class="ThViN" style="left: 11px; top: 15px; position: absolute; justify-content: center; display: flex; flex-direction: column; color: white; font-size: 28px; font-family: Roboto; font-weight: 400; line-height: 24px; letter-spacing: 0.50px; word-wrap: break-word">Thư viện</div>
+      <div data-layer="Line 2" class="Line2" style="width: 53px; height: 0px; left: 0px; top: 0px; position: absolute; transform: rotate(90deg); transform-origin: top left; outline: 1px white solid; outline-offset: -0.50px"></div>
+    </div>
+    <div data-layer="KhamPha" class="Khampha" role="button" tabindex="0" onclick="window.location.href='/Explore'" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Explore'" style="cursor: pointer; width: 141px; height: 53px; left: 26px; top: 106px; position: absolute">
+      <div data-layer="Khám phá" class="KhMPh" style="left: 11px; top: 15px; position: absolute; justify-content: center; display: flex; flex-direction: column; color: white; font-size: 28px; font-family: Roboto; font-weight: 400; line-height: 24px; letter-spacing: 0.50px; word-wrap: break-word">Khám phá</div>
+      <div data-layer="Line 3" class="Line3" style="width: 53px; height: 0px; left: 0px; top: 0px; position: absolute; transform: rotate(90deg); transform-origin: top left; outline: 1px white solid; outline-offset: -0.50px"></div>
+    </div>
+    <div data-layer="DanhSach" class="Danhsach" role="button" tabindex="0" onclick="window.location.href='/Playlists'" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Playlists'" style="cursor: pointer; width: 212px; height: 53px; left: 26px; top: 187px; position: absolute">
+      <div data-layer="Danh sách phát" class="DanhSChPhT" style="left: 11px; top: 15px; position: absolute; justify-content: center; display: flex; flex-direction: column; color: white; font-size: 28px; font-family: Roboto; font-weight: 400; line-height: 24px; letter-spacing: 0.50px; word-wrap: break-word">Danh sách phát</div>
+      <div data-layer="Line 4" class="Line4" style="width: 53px; height: 0px; left: 0px; top: 0px; position: absolute; transform: rotate(90deg); transform-origin: top left; outline: 1px white solid; outline-offset: -0.50px"></div>
+    </div>
+  </div>
+</div>
