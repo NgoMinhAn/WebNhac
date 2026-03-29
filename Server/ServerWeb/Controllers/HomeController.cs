@@ -74,7 +74,7 @@ namespace ServerWeb.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> EditSong(int id, string name, string author, string album, string genre)
+        public async Task<IActionResult> EditSong(int id, string name, string author, string album, string genre, string? duration)
         {
             var song = await _dbContext.Songs.FindAsync(id);
             if (song == null) return Json(new { success = false, message = "Bài hát không tồn tại" });
@@ -83,6 +83,19 @@ namespace ServerWeb.Controllers
             song.Author = author;
             song.Album = album;
             song.Genre = genre;
+
+            if (!string.IsNullOrEmpty(duration))
+            {
+                // Prefer mm:ss input and fallback to common TimeSpan patterns
+                if (TimeSpan.TryParseExact(duration.Trim(), new[] { "m\\:ss", "mm\\:ss", "h\\:mm\\:ss", "hh\\:mm\\:ss" }, null, out var parsedDuration))
+                {
+                    song.Duration = parsedDuration;
+                }
+                else if (TimeSpan.TryParse(duration.Trim(), out parsedDuration))
+                {
+                    song.Duration = parsedDuration;
+                }
+            }
 
             await _dbContext.SaveChangesAsync();
             return Json(new { success = true, message = "Cập nhật bài hát thành công.", song = new { song.Id, song.Name, song.Author, song.Album, song.Genre, duration = song.Duration.ToString(@"mm\:ss"), song.CoverPath } });
@@ -95,7 +108,7 @@ namespace ServerWeb.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> UploadSong(string name, string author, string album, string genre, IFormFile file, IFormFile? cover)
+        public async Task<IActionResult> UploadSong(string name, string author, string album, string genre, IFormFile file, IFormFile? cover, string? duration)
         {
             bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
 
@@ -143,6 +156,18 @@ namespace ServerWeb.Controllers
                 CoverPath = coverPath,
                 Duration = TimeSpan.Zero
             };
+
+            if (!string.IsNullOrEmpty(duration))
+            {
+                if (TimeSpan.TryParseExact(duration.Trim(), new[] { "m\\:ss", "mm\\:ss", "h\\:mm\\:ss", "hh\\:mm\\:ss" }, null, out var parsedDuration))
+                {
+                    song.Duration = parsedDuration;
+                }
+                else if (TimeSpan.TryParse(duration.Trim(), out parsedDuration))
+                {
+                    song.Duration = parsedDuration;
+                }
+            }
 
             _dbContext.Songs.Add(song);
             await _dbContext.SaveChangesAsync();
