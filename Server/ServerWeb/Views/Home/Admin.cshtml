@@ -1,3 +1,4 @@
+@model IEnumerable<ServerWeb.Models.Song>
 @{
     ViewData["Title"] = "Admin";
 }
@@ -5,29 +6,295 @@
 <div data-layer="Admin" class="Admin" style="width: 100vw; height: 100vh; position: relative; background: #AAAAAA; overflow: hidden">
   <div data-layer="Content" class="Content" style="width: calc(100vw * 0.786); height: calc(100vh - calc(100vh * 0.198)); left: calc(100vw * 0.216); top: calc(100vh * 0.198); position: absolute; background: #272837; overflow: hidden">
     <div data-layer="Rectangle 32" class="Rectangle32" style="width: 228px; height: 59px; left: 30px; top: 19px; position: absolute; background: #FFA64C; border-radius: 100px"></div>
-    <div data-layer="+ Thêm bài hát" class="ThMBIHT" role="button" tabindex="0" onclick="window.location.href='/Song/Create'" onkeydown="if(event.key==='Enter'||event.key===' ') window.location.href='/Song/Create'" style="cursor: pointer; width: 234px; height: 38px; left: 45px; top: 30px; position: absolute; color: black; font-size: 25px; font-family: Poppins; font-weight: 600; word-wrap: break-word">+ Thêm bài hát</div>
-    <div data-layer="Management" class="Management" style="width: 1071px; height: 715px; left: 44px; top: 93px; position: absolute; overflow: hidden">
-      <div data-layer="ManagementBG" class="Managementbg" style="width: 1070px; height: 719px; left: 1px; top: -4px; position: absolute; background: #4F4F4F; border-radius: 20px"></div>
-      <div data-layer="Rectangle 34" class="Rectangle34" style="width: 1016px; height: 50px; left: 28px; top: 9px; position: absolute; background: #818181; border-radius: 30px"></div>
-      <div data-layer="1st trailing-icon" data-show-focus-indicator="false" data-size="Small" data-state="Enabled" data-type="Round" data-width="Default" class="StTrailingIcon" style="width: 48px; height: 48px; left: 36px; top: 10px; position: absolute; justify-content: center; align-items: center; display: inline-flex">
-        <div data-layer="Content" class="Content" style="width: 40px; overflow: hidden; border-radius: 100px; flex-direction: column; justify-content: center; align-items: center; display: inline-flex">
-          <div data-layer="State-layer" class="StateLayer" style="align-self: stretch; height: 40px; justify-content: center; align-items: center; display: inline-flex">
-            <div data-svg-wrapper data-layer="Icon" class="Icon" style="position: relative">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19.6 21L13.3 14.7C12.8 15.1 12.225 15.4167 11.575 15.65C10.925 15.8833 10.2333 16 9.5 16C7.68333 16 6.14583 15.3708 4.8875 14.1125C3.62917 12.8542 3 11.3167 3 9.5C3 7.68333 3.62917 6.14583 4.8875 4.8875C6.14583 3.62917 7.68333 3 9.5 3C11.3167 3 12.8542 3.62917 14.1125 4.8875C15.3708 6.14583 16 7.68333 16 9.5C16 10.2333 15.8833 10.925 15.65 11.575C15.4167 12.225 15.1 12.8 14.7 13.3L21 19.6L19.6 21ZM9.5 14C10.75 14 11.8125 13.5625 12.6875 12.6875C13.5625 11.8125 14 10.75 14 9.5C14 8.25 13.5625 7.1875 12.6875 6.3125C11.8125 5.4375 10.75 5 9.5 5C8.25 5 7.1875 5.4375 6.3125 6.3125C5.4375 7.1875 5 8.25 5 9.5C5 10.75 5.4375 11.8125 6.3125 12.6875C7.1875 13.5625 8.25 14 9.5 14Z" fill="var(--Schemes-On-Surface-Variant, #49454F)"/>
-              </svg>
+    <div data-layer="+ Thêm bài hát" class="ThMBIHT" role="button" tabindex="0" onclick="openUploadPopup()" onkeydown="if(event.key==='Enter'||event.key===' ') openUploadPopup()" style="cursor: pointer; width: 234px; height: 38px; left: 45px; top: 30px; position: absolute; color: black; font-size: 25px; font-family: Poppins; font-weight: 600; word-wrap: break-word">+ Thêm bài hát</div>
+    <style>
+      #uploadPopup {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(12, 17, 43, 0.72);
+        z-index: 10000;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+      #uploadPopup .popup-card {
+        width: min(94vw, 540px);
+        max-height: calc(100vh - 60px);
+        background: linear-gradient(140deg, #1a1f42 0%, #28335d 100%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 18px;
+        box-shadow: 0 24px 45px rgba(0, 0, 0, 0.36);
+        color: #f0f5ff;
+        padding: 18px;
+        position: relative;
+        font-family: 'Poppins', sans-serif;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        overflow-y: auto;
+      }
+      #uploadPopup .popup-card h3 {
+        margin: 0;
+        font-size: 1.45rem;
+        font-weight: 700;
+        color: #edf4ff;
+        text-align: center;
+      }
+      #uploadPopup .popup-card .title-line {
+        height: 1px;
+        width: 100%;
+        margin: 6px 0 14px;
+        background: linear-gradient(90deg, rgba(255,255,255,.1), rgba(255,255,255,.4), rgba(255,255,255,.1));
+      }
+      #uploadPopup .popup-card .description {
+        font-size: .86rem;
+        color: #b6c3e6;
+        text-align: center;
+        margin-bottom: 6px;
+      }
+      #uploadPopup .popup-card .close-btn {
+        position: absolute;
+        right: 14px;
+        top: 14px;
+        width: 30px;
+        height: 30px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.18);
+        color: #ffffff;
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+      }
+      #uploadPopup .popup-card .form-group {
+        margin-bottom: 10px;
+      }
+      #uploadPopup .popup-card label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: .9rem;
+        color: #c7d4f6;
+      }
+      #uploadPopup .popup-card input[type=text],
+      #uploadPopup .popup-card input[type=file],
+      #uploadPopup .popup-card select {
+        width: 100%;
+        min-height: 42px;
+        padding: 10px 12px;
+        background: #273065;
+        border: 1px solid #6572b4;
+        border-radius: 9px;
+        color: #eef2ff;
+        font-size: .95rem;
+      }
+      #uploadPopup .popup-card .row {
+        display: flex;
+        gap: 12px;
+      }
+      #uploadPopup .popup-card .row .col {
+        flex: 1;
+      }
+      #uploadPopup .popup-card .file-box {
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        background: #2d356d;
+        border: 1px dashed #8aa2dd;
+        border-radius: 10px;
+        padding: 10px;
+        cursor: pointer;
+      }
+      #uploadPopup .popup-card .file-box .text {
+        flex: 1;
+        font-size: .9rem;
+        color: #e5ecff;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #uploadPopup .popup-card .file-box .icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        background: #283b93;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        color: #ffffff;
+      }
+      #uploadPopup .popup-card .cover-preview {
+        margin-top: 10px;
+        width: 100%;
+        height: 92px;
+        border: 1px dashed #7c8fd5;
+        border-radius: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #ccd7f6;
+        background: #1f294f;
+        text-align: center;
+        font-size: .87rem;
+      }
+      #uploadPopup .popup-card .duration {
+        margin-top: 8px;
+        font-size: .88rem;
+        color: #abc2f0;
+        text-align: right;
+      }
+      #uploadPopup .popup-card .actions {
+        display: flex;
+        gap: 11px;
+        margin-top: 14px;
+      }
+      #uploadPopup .popup-card .actions button {
+        flex: 1;
+        min-height: 45px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 700;
+        font-size: 0.96rem;
+        cursor: pointer;
+        transition: transform .16s ease, box-shadow .16s ease;
+      }
+      #uploadPopup .popup-card .actions button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, .22);
+      }
+      #uploadPopup .popup-card .btn-cancel {
+        background: #404f87;
+        color: #e7ebff;
+      }
+      #uploadPopup .popup-card .btn-save {
+        background: linear-gradient(90deg, #ffab4f 0%, #ffbb6c 100%);
+        color: #1f2230;
+      }
+      #uploadPopup .popup-card #uploadResult {
+        min-height: 22px;
+        margin-bottom: 6px;
+        font-weight: 700;
+        text-align: center;
+      }
+    </style>
+
+    <div id="uploadPopup" aria-hidden="true">
+      <div class="popup-card" role="dialog" aria-labelledby="uploadTitle" aria-modal="true">
+        <button type="button" class="close-btn" aria-label="Đóng" onclick="closeUploadPopup()">×</button>
+        <h3 id="uploadTitle">Thêm bài hát</h3>
+        <div class="title-line"></div>
+        <div class="description">Vui lòng điền đầy đủ thông tin và upload file nhạc (mp3)</div>
+        <div id="uploadResult"></div>
+
+        <form id="uploadSongForm" method="post" enctype="multipart/form-data" autocomplete="off">
+          <input id="editingSongId" name="id" type="hidden" value="" />
+          <div class="form-group">
+            <label for="name">Tên bài hát <span style="color:#ffb7b7">*</span></label>
+            <input id="name" name="name" type="text" placeholder="Stay" required autocomplete="off" />
+          </div>
+
+          <div class="form-group">
+            <label for="author">Nghệ sĩ <span style="color:#ffb7b7">*</span></label>
+            <input id="author" name="author" type="text" placeholder="The Kid Laroi" required autocomplete="off" />
+          </div>
+
+          <div class="row">
+            <div class="col form-group">
+              <label for="album">Album</label>
+              <select id="album" name="album">
+                <option value="">-- Chọn album --</option>
+                <option value="F*ck Love 3">F*ck Love 3</option>
+                <option value="Album 1">Album 1</option>
+                <option value="Album 2">Album 2</option>
+              </select>
+            </div>
+            <div class="col form-group">
+              <label for="genre">Thể loại</label>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <select id="genre" name="genre" style="flex:1;">
+                  <option value="">-- Chọn thể loại --</option>
+                  <option value="Pop">Pop</option>
+                  <option value="EDM">EDM</option>
+                  <option value="Rock">Rock</option>
+                </select>
+                <button type="button" class="btn-add-category" onclick="alert('Tính năng thêm thể loại sẽ được cập nhật.');">Thêm</button>
+              </div>
             </div>
           </div>
+
+          <div class="form-group">
+            <label for="file">Upload file nhạc <span style="color:#ffb7b7">*</span></label>
+            <input id="file" name="file" type="file" accept="audio/*" required style="display: none;" />
+            <div class="file-box" onclick="document.getElementById('file').click();" title="Chọn file nhạc">
+              <div class="text" id="fileName">Chọn file mp3</div>
+              <div class="icon">🎵</div>
+            </div>
+            <div class="cover-preview" id="coverPreview">Không có ảnh bìa</div>
+            <div class="duration" id="durationLabel">Thời lượng: 00:00</div>
+          </div>
+
+          <div class="form-group">
+            <label for="cover">Ảnh bìa (tùy chọn)</label>
+            <input id="cover" name="cover" type="file" accept="image/*" style="padding: 6px; background: #1e223f; color: #eef1ff;" />
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn-cancel" onclick="closeUploadPopup()">Hủy</button>
+            <button id="saveButton" type="submit" class="btn-save">Lưu</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div data-layer="Management" class="Management" style="width: 1071px; height: 715px; left: 44px; top: 93px; position: absolute; overflow: hidden">
+      <div data-layer="ManagementBG" class="Managementbg" style="width: 1070px; height: 719px; left: 1px; top: -4px; position: absolute; background: #4F4F4F; border-radius: 20px"></div>
+      <div style="position:absolute; left: 20px; top: 20px; right: 20px; bottom: 20px; overflow:auto;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+          <div style="color:white; font-size:24px; font-weight:700;">Quản lý bài hát</div>
+          <input id="searchSong" type="text" placeholder="Tìm bài hát..." style="width:260px; padding:8px 12px; border-radius:8px; border:1px solid #6b76a5; background:#23294f; color:#eff2ff;" />
+        </div>
+        <div style="width:100%; overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse; color:#f0f6ff; font-size:0.95rem;">
+            <thead>
+              <tr style="background:#2c335f;">
+                <th style="padding:10px 12px; text-align:left;">Ảnh</th>
+                <th style="padding:10px 12px; text-align:left;">Tên bài hát</th>
+                <th style="padding:10px 12px; text-align:left;">Nghệ sĩ</th>
+                <th style="padding:10px 12px; text-align:left;">Album</th>
+                <th style="padding:10px 12px; text-align:left;">Thể loại</th>
+                <th style="padding:10px 12px; text-align:left;">Thời lượng</th>
+                <th style="padding:10px 12px; text-align:left;">Hành động</th>
+              </tr>
+            </thead>
+            <tbody id="songsTableBody">
+              @if (!Model.Any())
+              {
+                <tr><td colspan="7" style="padding:16px; color:#ced5e5; text-align:center;">Không có bài hát. Vui lòng thêm bài hát.</td></tr>
+              }
+              else
+              {
+                @foreach (var song in Model)
+                {
+                  <tr data-song-id="@song.Id" style="border-bottom: 1px solid rgba(255,255,255,.1);">
+                    <td style="padding:10px 12px;"><img src="@(song.CoverPath ?? "/images/default-cover.png")" alt="cover" style="width:48px; height:48px; object-fit:cover; border-radius:6px;" /></td>
+                    <td style="padding:10px 12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@song.Name</td>
+                    <td style="padding:10px 12px;">@song.Author</td>
+                    <td style="padding:10px 12px;">@song.Album</td>
+                    <td style="padding:10px 12px;">@song.Genre</td>
+                    <td style="padding:10px 12px;">@song.Duration.ToString(@"mm\:ss")</td>
+                    <td style="padding:10px 12px;">
+                      <button onclick="startEditSong(@song.Id)" style="margin-right:8px;padding:3px 8px;border:none;border-radius:6px;background:#5b76d4;color:#fff;cursor:pointer;">Sửa</button>
+                      <button onclick="deleteSong(@song.Id)" style="padding:3px 8px;border:none;border-radius:6px;background:#e74c3c;color:#fff;cursor:pointer;">Xóa</button>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
         </div>
       </div>
-      <div data-layer="Tìm kiếm bài hát..." class="TMKiMBIHT" style="left: 84px; top: 15px; position: absolute; color: #49454F; font-size: 25px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Tìm kiếm bài hát...</div>
-      <div data-layer="Seperator" class="Seperator" style="width: 1069px; height: 0px; left: 2px; top: 74px; position: absolute; outline: 1px white solid; outline-offset: -0.50px"></div>
-      <div data-layer="Ảnh" class="Nh" style="left: 26px; top: 89px; position: absolute; color: white; font-size: 20px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Ảnh</div>
-      <div data-layer="Tên bài hát" class="TNBIHT" style="left: 143px; top: 89px; position: absolute; color: white; font-size: 20px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Tên bài hát</div>
-      <div data-layer="Nghệ sĩ" class="NghS" style="left: 381px; top: 89px; position: absolute; color: white; font-size: 20px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Nghệ sĩ</div>
-      <div data-layer="Album" class="Album" style="left: 562px; top: 89px; position: absolute; color: white; font-size: 20px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Album</div>
-      <div data-layer="Thể loại" class="ThLoI" style="left: 717px; top: 89px; position: absolute; color: white; font-size: 20px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Thể loại</div>
-      <div data-layer="Thời lượng" class="ThILNg" style="left: 850px; top: 89px; position: absolute; color: white; font-size: 20px; font-family: Poppins; font-weight: 600; word-wrap: break-word">Thời lượng</div>
     </div>
   </div>
   <div data-layer="Header" class="Header" style="width: 100vw; height: calc(100vh * 0.198); left: 0px; top: 0px; position: absolute; overflow: hidden">
@@ -61,6 +328,306 @@
       </svg>
     </div>
   </div>
+  <script>
+      var currentlyEditingId = null;
+
+      function openUploadPopup() {
+        document.getElementById('uploadResult').textContent = '';
+        document.getElementById('uploadSongForm').reset();
+        document.getElementById('editingSongId').value = '';
+        currentlyEditingId = null;
+        document.getElementById('uploadTitle').textContent = 'Thêm bài hát';
+        document.getElementById('saveButton').textContent = 'Lưu';
+        document.getElementById('fileName').textContent = 'Chọn file mp3';
+        document.getElementById('durationLabel').textContent = 'Thời lượng: 00:00';
+        document.getElementById('coverPreview').textContent = 'Không có ảnh bìa';
+        document.getElementById('coverPreview').style.backgroundImage = 'none';
+        document.getElementById('uploadPopup').style.display = 'flex';
+      }
+
+      function closeUploadPopup() {
+        document.getElementById('uploadPopup').style.display = 'none';
+      }
+
+      function renderSongRow(song) {
+        const row = document.createElement('tr');
+        row.dataset.songId = song.id;
+        row.innerHTML = `
+          <td style="padding:10px;">
+            <img src="${song.coverPath ? song.coverPath : '/images/default-cover.png'}" alt="Cover" style="width:40px;height:40px;object-fit:cover;border-radius:6px;" />
+          </td>
+          <td style="padding:10px;">${song.name || ''}</td>
+          <td style="padding:10px;">${song.author || ''}</td>
+          <td style="padding:10px;">${song.album || ''}</td>
+          <td style="padding:10px;">${song.genre || ''}</td>
+          <td style="padding:10px;">${song.duration || '00:00'}</td>
+          <td style="padding:10px;">
+            <button type="button" onclick="startEditSong(${song.id})" style="margin-right:5px;padding:5px 8px;border:none;border-radius:6px;background:#5b76d4;color:#fff;cursor:pointer;">Sửa</button>
+            <button type="button" onclick="deleteSong(${song.id})" style="padding:5px 8px;border:none;border-radius:6px;background:#e74c3c;color:#fff;cursor:pointer;">Xóa</button>
+          </td>
+        `;
+        return row;
+      }
+
+      function appendSongToTable(song) {
+        const tableBody = document.getElementById('songsTableBody');
+        if (!tableBody) return;
+        const emptyRow = document.getElementById('noSongsRow');
+        if (emptyRow) emptyRow.remove();
+        tableBody.appendChild(renderSongRow(song));
+      }
+
+      async function deleteSong(id) {
+        if (!confirm('Bạn có chắc muốn xóa bài hát này?')) return;
+        const response = await fetch('/Home/DeleteSong', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: id })
+        });
+        const data = await response.json();
+        if (data.success) {
+          const row = document.querySelector(`tr[data-song-id="${id}"]`);
+          if (row) row.remove();
+        } else {
+          alert(data.message || 'Xóa thất bại');
+        }
+      }
+
+      function startEditSong(id) {
+        const row = document.querySelector(`tr[data-song-id="${id}"]`);
+        if (!row) return;
+
+        const cells = row.querySelectorAll('td');
+        const name = cells[1].textContent.trim();
+        const author = cells[2].textContent.trim();
+        const album = cells[3].textContent.trim();
+        const genre = cells[4].textContent.trim();
+
+        document.getElementById('name').value = name;
+        document.getElementById('author').value = author;
+        document.getElementById('album').value = album;
+        document.getElementById('genre').value = genre;
+        document.getElementById('editingSongId').value = id;
+        currentlyEditingId = id;
+        document.getElementById('uploadTitle').textContent = 'Chỉnh sửa bài hát';
+        document.getElementById('saveButton').textContent = 'Cập nhật';
+
+        openUploadPopup();
+      }
+
+      function formatDuration(seconds) {
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+        return m + ':' + s;
+      }
+
+      function handleFileChange() {
+        const fileInput = document.getElementById('file');
+        const fileName = document.getElementById('fileName');
+        const durationLabel = document.getElementById('durationLabel');
+        const coverPreview = document.getElementById('coverPreview');
+
+        if (!fileInput.files.length) {
+          fileName.textContent = 'Chọn file mp3';
+          durationLabel.textContent = 'Thời lượng: 00:00';
+          coverPreview.textContent = 'Không có ảnh bìa';
+          coverPreview.style.backgroundImage = 'none';
+          return;
+        }
+
+        const file = fileInput.files[0];
+        fileName.textContent = file.name;
+
+        const audio = document.createElement('audio');
+        audio.preload = 'metadata';
+        audio.src = URL.createObjectURL(file);
+        audio.addEventListener('loadedmetadata', function () {
+          durationLabel.textContent = 'Thời lượng: ' + formatDuration(audio.duration);
+          URL.revokeObjectURL(audio.src);
+        });
+
+        coverPreview.textContent = '';
+        coverPreview.style.backgroundImage = 'linear-gradient(135deg, rgba(66, 74, 149, .6), rgba(32, 37, 78, .6))';
+        coverPreview.style.color = '#e1e4ff';
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        const fileInput = document.getElementById('file');
+        fileInput.addEventListener('change', handleFileChange);
+
+        const form = document.getElementById('uploadSongForm');
+        form.addEventListener('submit', async function (event) {
+          event.preventDefault();
+
+          const editId = document.getElementById('editingSongId').value;
+
+          const formData = new FormData(form);
+          if (editId) formData.append('id', editId);
+
+          const resultEl = document.getElementById('uploadResult');
+          resultEl.style.color = '#ffffff';
+          resultEl.textContent = 'Đang xử lý...';
+
+          let url = '/Home/UploadSong';
+          let method = 'POST';
+          if (editId) {
+            url = '/Home/EditSong';
+          }
+
+          try {
+            const response = await fetch(url, {
+              method: method,
+              body: formData
+            });
+
+            if (!response.ok) throw new Error('Lỗi máy chủ');
+
+            const data = await response.json();
+            if (data.success) {
+              resultEl.style.color = '#95f39f';
+              resultEl.textContent = data.message || 'Thao tác thành công.';
+
+              const songData = data.song || {
+                id: data.id,
+                name: document.getElementById('name').value,
+                author: document.getElementById('author').value,
+                album: document.getElementById('album').value || 'Chưa có',
+                genre: document.getElementById('genre').value || 'Chưa có',
+                duration: document.getElementById('durationLabel').textContent.replace('Thời lượng:', '').trim(),
+                coverPath: ''
+              };
+
+              if (editId) {
+                const existingRow = document.querySelector(`tr[data-song-id="${songData.id}"]`);
+                if (existingRow) {
+                  const updatedRow = renderSongRow(songData);
+                  existingRow.replaceWith(updatedRow);
+                }
+              } else {
+                appendSongToTable(songData);
+              }
+
+              setTimeout(function () {
+                closeUploadPopup();
+              }, 800);
+            } else {
+              resultEl.style.color = '#ff9494';
+              resultEl.textContent = data.message || 'Xảy ra lỗi. Vui lòng thử lại.';
+            }
+          } catch (ex) {
+            resultEl.style.color = '#ff9494';
+            resultEl.textContent = 'Lỗi kết nối hoặc server.';
+            console.error(ex);
+          }
+        });
+
+        const searchInput = document.getElementById('searchSong');
+        searchInput?.addEventListener('input', function () {
+          const term = this.value.toLowerCase();
+          document.querySelectorAll('#songsTableBody tr').forEach((row) => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(term) ? '' : 'none';
+          });
+        });
+      });
+    </script>
+      window.addEventListener('click', function (e) {
+        const popup = document.getElementById('uploadPopup');
+        if (e.target === popup) closeUploadPopup();
+      });
+
+      function formatDuration(seconds) {
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+        return m + ':' + s;
+      }
+
+      function handleFileChange() {
+        const fileInput = document.getElementById('file');
+        const fileName = document.getElementById('fileName');
+        const durationLabel = document.getElementById('durationLabel');
+        const coverPreview = document.getElementById('coverPreview');
+
+        if (fileInput.files.length === 0) {
+          fileName.textContent = 'Chọn file mp3';
+          durationLabel.textContent = 'Thời lượng: 00:00';
+          coverPreview.textContent = 'Không có ảnh bìa';
+          coverPreview.style.backgroundImage = 'none';
+          return;
+        }
+
+        const file = fileInput.files[0];
+        fileName.textContent = file.name;
+
+        const audio = document.createElement('audio');
+        audio.preload = 'metadata';
+        audio.src = URL.createObjectURL(file);
+
+        audio.addEventListener('loadedmetadata', function () {
+          durationLabel.textContent = 'Thời lượng: ' + formatDuration(audio.duration);
+          URL.revokeObjectURL(audio.src);
+        });
+
+        coverPreview.textContent = '';
+        coverPreview.style.backgroundImage = 'linear-gradient(135deg, rgba(66, 74, 149, .6), rgba(32, 37, 78, .6))';
+        coverPreview.style.color = '#e1e4ff';
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        var fileInput = document.getElementById('file');
+        fileInput.addEventListener('change', handleFileChange);
+
+        var form = document.getElementById('uploadSongForm');
+        form.addEventListener('submit', async function (event) {
+          event.preventDefault();
+
+          var formData = new FormData(form);
+          var resultEl = document.getElementById('uploadResult');
+          resultEl.style.color = '#ffffff';
+          resultEl.textContent = 'Đang tải lên...';
+
+          try {
+            const response = await fetch('/Home/UploadSong', {
+              method: 'POST',
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+              },
+              body: formData
+            });
+
+            if (!response.ok) {
+              throw new Error('Lỗi máy chủ');
+            }
+
+            const data = await response.json();
+            if (data.success) {
+              resultEl.style.color = '#95f39f';
+              resultEl.textContent = data.message || 'Thêm bài hát thành công.';
+
+              const durationText = document.getElementById('durationLabel').textContent.replace('Thời lượng:', '').trim();
+              appendSongToList({
+                name: document.getElementById('name').value.trim(),
+                author: document.getElementById('author').value.trim(),
+                album: document.getElementById('album').value || 'Chưa có',
+                genre: document.getElementById('genre').value || 'Chưa có',
+                duration: durationText
+              });
+
+              setTimeout(function () {
+                closeUploadPopup();
+              }, 800);
+            } else {
+              resultEl.style.color = '#ff9494';
+              resultEl.textContent = data.message || 'Xảy ra lỗi khi thêm bài hát.';
+            }
+          } catch (ex) {
+            resultEl.style.color = '#ff9494';
+            resultEl.textContent = 'Lỗi mạng hoặc máy chủ. Vui lòng thử lại.';
+            console.error(ex);
+          }
+        });
+      });
+    </script>
   <div data-layer="Sidebar" class="Sidebar" style="width: calc(100vw * 0.216); height: calc(100vh - calc(100vh * 0.198)); left: 0px; top: calc(100vh * 0.198); position: absolute; overflow: hidden">
     <div data-layer="SidebarBG" class="Sidebarbg" style="width: calc(100vw * 0.215); height: calc(100vh - calc(100vh * 0.198)); left: 0px; top: 0px; position: absolute; background: linear-gradient(180deg, #818181 0%, #090D4C 100%)"></div>
     <div data-layer="TaoPlaylistButton" class="Taoplaylistbutton" style="width: 242px; height: 48px; left: 28px; top: 735px; position: absolute; background: white; overflow: hidden; border-radius: 999px">

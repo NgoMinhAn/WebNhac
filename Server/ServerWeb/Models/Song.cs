@@ -20,6 +20,8 @@ namespace ServerWeb.Models
 
         public string? FilePath { get; set; } // Path to the song file in the Music folder
 
+        public string? CoverPath { get; set; } // Optional cover image path
+
         public TimeSpan Duration { get; set; } // Duration of the song
     }
 }

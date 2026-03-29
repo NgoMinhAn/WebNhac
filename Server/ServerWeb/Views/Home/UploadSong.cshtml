@@ -1,0 +1,107 @@
+@{
+    ViewData["Title"] = "Upload Song";
+}
+
+<style>
+    .upload-page {
+        display: flex;
+        min-height: 80vh;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(135deg, #1b1c2f, #2f344d);
+        color: #f8f9ff;
+        padding: 30px 15px;
+    }
+    .upload-card {
+        width: min(96vw, 520px);
+        padding: 28px;
+        background: rgba(28, 31, 55, 0.95);
+        border: 1px solid #4c5a8e;
+        border-radius: 14px;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+    }
+    .upload-card h2 {
+        margin-top: 0;
+        color: #f6da91;
+        margin-bottom: 16px;
+    }
+    .upload-card label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #cdd2e6;
+    }
+    .upload-card input[type=text], .upload-card input[type=file] {
+        width: 100%;
+        padding: 10px 11px;
+        margin-bottom: 12px;
+        border: 1px solid #5e6ba5;
+        border-radius: 8px;
+        background: #1f243f;
+        color: #eef1ff;
+        font-size: 0.95rem;
+    }
+    .upload-card button[type=submit] {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 9px;
+        font-weight: 700;
+        background: linear-gradient(100deg, #f9b149, #ffda80);
+        color: #1a1c2d;
+        cursor: pointer;
+    }
+    .upload-card button[type=submit]:hover {
+        filter: brightness(1.05);
+    }
+    .status-message {
+        margin-bottom: 12px;
+        padding: 10px;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    .back-link {
+        display: inline-block;
+        margin-top: 10px;
+        color: #d6e6ff;
+        text-decoration: underline;
+    }
+</style>
+
+<div class="upload-page">
+    <div class="upload-card">
+        <h2>Thêm bài hát</h2>
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="status-message" style="background:#163a0f; color:#9ef89a;">@TempData["SuccessMessage"]</div>
+        }
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="status-message" style="background:#5e191d; color:#ffd5dc;">Có lỗi trong dữ liệu nhập vào.</div>
+        }
+
+        <form asp-action="UploadSong" method="post" enctype="multipart/form-data">
+            <label for="name">Tên bài hát</label>
+            <input type="text" id="name" name="name" required />
+
+            <label for="author">Nghệ sĩ</label>
+            <input type="text" id="author" name="author" required />
+
+            <label for="album">Album</label>
+            <input type="text" id="album" name="album" required />
+
+            <label for="genre">Thể loại</label>
+            <input type="text" id="genre" name="genre" required />
+
+            <label for="file">Tệp nhạc</label>
+            <input type="file" id="file" name="file" accept="audio/*" required />
+
+            <button type="submit">Lưu bài hát</button>
+        </form>
+
+        <a class="back-link" href="/Home/Admin">Quay lại Admin</a>
+    </div>
+</div>
