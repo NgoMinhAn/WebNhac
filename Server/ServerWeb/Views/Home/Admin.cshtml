@@ -203,12 +203,7 @@
           <div class="row">
             <div class="col form-group">
               <label for="album">Album</label>
-              <select id="album" name="album">
-                <option value="">-- Chọn album --</option>
-                <option value="F*ck Love 3">F*ck Love 3</option>
-                <option value="Album 1">Album 1</option>
-                <option value="Album 2">Album 2</option>
-              </select>
+              <input id="album" name="album" type="text" placeholder="Nhập tên album" autocomplete="off" />
             </div>
             <div class="col form-group">
               <label for="genre">Thể loại</label>
@@ -219,25 +214,26 @@
                   <option value="EDM">EDM</option>
                   <option value="Rock">Rock</option>
                 </select>
-                <button type="button" class="btn-add-category" onclick="alert('Tính năng thêm thể loại sẽ được cập nhật.');">Thêm</button>
+                <button type="button" class="btn-add-category" onclick="addGenre()">Thêm</button>
               </div>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="file">Upload file nhạc <span style="color:#ffb7b7">*</span></label>
-            <input id="file" name="file" type="file" accept="audio/*" required style="display: none;" />
-            <div class="file-box" onclick="document.getElementById('file').click();" title="Chọn file nhạc">
-              <div class="text" id="fileName">Chọn file mp3</div>
-              <div class="icon">🎵</div>
-            </div>
-            <div class="cover-preview" id="coverPreview">Không có ảnh bìa</div>
-            <div class="duration" id="durationLabel">Thời lượng: 00:00</div>
+            <label for="duration">Thời lượng</label>
+            <input id="duration" name="duration" type="text" placeholder="02:38" autocomplete="off" />
+          </div>
+
+          <div class="form-group">
+            <label for="file">File nhạc <span style="color:#ffb7b7">*</span></label>
+            <input id="file" name="file" type="file" accept="audio/*" required style="padding: 6px; background: #1e223f; color: #eef1ff;" />
+            <div id="fileName" style="margin-top: 4px; font-size: 0.9rem; color: #a8b4d6;">Chọn file mp3</div>
           </div>
 
           <div class="form-group">
             <label for="cover">Ảnh bìa (tùy chọn)</label>
             <input id="cover" name="cover" type="file" accept="image/*" style="padding: 6px; background: #1e223f; color: #eef1ff;" />
+            <div id="coverPreview" style="margin-top: 8px; width: 80px; height: 80px; border-radius: 8px; background: linear-gradient(135deg, rgba(66, 74, 149, .6), rgba(32, 37, 78, .6)); display: flex; align-items: center; justify-content: center; color: #e1e4ff; font-size: 0.8rem; text-align: center;">Không có ảnh bìa</div>
           </div>
 
           <div class="actions">
@@ -330,6 +326,8 @@
   </div>
   <script>
       var currentlyEditingId = null;
+      const uploadUrl = '@Url.Action("UploadSong", "Home")';
+      const editUrl = '@Url.Action("EditSong", "Home")';
 
       function openUploadPopup() {
         document.getElementById('uploadResult').textContent = '';
@@ -339,14 +337,40 @@
         document.getElementById('uploadTitle').textContent = 'Thêm bài hát';
         document.getElementById('saveButton').textContent = 'Lưu';
         document.getElementById('fileName').textContent = 'Chọn file mp3';
-        document.getElementById('durationLabel').textContent = 'Thời lượng: 00:00';
+        document.getElementById('duration').value = '';
         document.getElementById('coverPreview').textContent = 'Không có ảnh bìa';
-        document.getElementById('coverPreview').style.backgroundImage = 'none';
+        document.getElementById('coverPreview').style.backgroundImage = 'linear-gradient(135deg, rgba(66, 74, 149, .6), rgba(32, 37, 78, .6))';
+        document.getElementById('coverPreview').style.color = '#e1e4ff';
         document.getElementById('uploadPopup').style.display = 'flex';
       }
 
       function closeUploadPopup() {
         document.getElementById('uploadPopup').style.display = 'none';
+      }
+
+      function addGenre() {
+        const genreSelect = document.getElementById('genre');
+        const genre = prompt('Nhập thể loại mới:');
+        if (!genre) return;
+
+        const trimmed = genre.trim();
+        if (!trimmed) {
+          alert('Vui lòng nhập một thể loại hợp lệ.');
+          return;
+        }
+
+        const exists = Array.from(genreSelect.options).some(opt => opt.value.toLowerCase() === trimmed.toLowerCase());
+        if (exists) {
+          alert('Thể loại đã tồn tại.');
+          genreSelect.value = trimmed;
+          return;
+        }
+
+        const option = document.createElement('option');
+        option.value = trimmed;
+        option.textContent = trimmed;
+        genreSelect.appendChild(option);
+        genreSelect.value = trimmed;
       }
 
       function renderSongRow(song) {
@@ -398,19 +422,33 @@
         if (!row) return;
 
         const cells = row.querySelectorAll('td');
+        const coverImg = cells[0].querySelector('img');
         const name = cells[1].textContent.trim();
         const author = cells[2].textContent.trim();
         const album = cells[3].textContent.trim();
         const genre = cells[4].textContent.trim();
+        const duration = cells[5].textContent.trim();
 
         document.getElementById('name').value = name;
         document.getElementById('author').value = author;
         document.getElementById('album').value = album;
         document.getElementById('genre').value = genre;
+        document.getElementById('duration').value = duration;
         document.getElementById('editingSongId').value = id;
         currentlyEditingId = id;
         document.getElementById('uploadTitle').textContent = 'Chỉnh sửa bài hát';
         document.getElementById('saveButton').textContent = 'Cập nhật';
+
+        const coverPreview = document.getElementById('coverPreview');
+        if (coverImg && coverImg.src && !coverImg.src.includes('default-cover.png')) {
+          coverPreview.style.backgroundImage = `url('${coverImg.src}')`;
+          coverPreview.style.color = '#fff';
+          coverPreview.textContent = '';
+        } else {
+          coverPreview.style.backgroundImage = 'linear-gradient(135deg, rgba(66, 74, 149, .6), rgba(32, 37, 78, .6))';
+          coverPreview.style.color = '#e1e4ff';
+          coverPreview.textContent = 'Không có ảnh bìa';
+        }
 
         openUploadPopup();
       }
@@ -424,12 +462,12 @@
       function handleFileChange() {
         const fileInput = document.getElementById('file');
         const fileName = document.getElementById('fileName');
-        const durationLabel = document.getElementById('durationLabel');
+        const durationInput = document.getElementById('duration');
         const coverPreview = document.getElementById('coverPreview');
 
         if (!fileInput.files.length) {
           fileName.textContent = 'Chọn file mp3';
-          durationLabel.textContent = 'Thời lượng: 00:00';
+          durationInput.value = '';
           coverPreview.textContent = 'Không có ảnh bìa';
           coverPreview.style.backgroundImage = 'none';
           return;
@@ -442,7 +480,9 @@
         audio.preload = 'metadata';
         audio.src = URL.createObjectURL(file);
         audio.addEventListener('loadedmetadata', function () {
-          durationLabel.textContent = 'Thời lượng: ' + formatDuration(audio.duration);
+          const detectedDuration = formatDuration(audio.duration);
+          fileName.textContent = file.name + ' (' + detectedDuration + ')';
+          durationInput.value = detectedDuration;
           URL.revokeObjectURL(audio.src);
         });
 
@@ -455,6 +495,24 @@
         const fileInput = document.getElementById('file');
         fileInput.addEventListener('change', handleFileChange);
 
+        const coverInput = document.getElementById('cover');
+        coverInput.addEventListener('change', function() {
+          const coverPreview = document.getElementById('coverPreview');
+          if (this.files.length) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              coverPreview.style.backgroundImage = `url('${e.target.result}')`;
+              coverPreview.style.color = '#fff';
+              coverPreview.textContent = '';
+            };
+            reader.readAsDataURL(this.files[0]);
+          } else {
+            coverPreview.style.backgroundImage = 'linear-gradient(135deg, rgba(66, 74, 149, .6), rgba(32, 37, 78, .6))';
+            coverPreview.style.color = '#e1e4ff';
+            coverPreview.textContent = 'Không có ảnh bìa';
+          }
+        });
+
         const form = document.getElementById('uploadSongForm');
         form.addEventListener('submit', async function (event) {
           event.preventDefault();
@@ -464,23 +522,31 @@
           const formData = new FormData(form);
           if (editId) formData.append('id', editId);
 
+          // Add duration from the input
+          const durationValue = document.getElementById('duration').value.trim();
+          if (durationValue) {
+            formData.append('duration', durationValue);
+          }
+
           const resultEl = document.getElementById('uploadResult');
           resultEl.style.color = '#ffffff';
           resultEl.textContent = 'Đang xử lý...';
 
-          let url = '/Home/UploadSong';
-          let method = 'POST';
-          if (editId) {
-            url = '/Home/EditSong';
-          }
+          const url = editId ? editUrl : uploadUrl;
 
           try {
             const response = await fetch(url, {
-              method: method,
+              method: 'POST',
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+              },
               body: formData
             });
 
-            if (!response.ok) throw new Error('Lỗi máy chủ');
+            if (!response.ok) {
+              const text = await response.text();
+              throw new Error(`HTTP ${response.status}: ${text}`);
+            }
 
             const data = await response.json();
             if (data.success) {
@@ -493,7 +559,7 @@
                 author: document.getElementById('author').value,
                 album: document.getElementById('album').value || 'Chưa có',
                 genre: document.getElementById('genre').value || 'Chưa có',
-                duration: document.getElementById('durationLabel').textContent.replace('Thời lượng:', '').trim(),
+                duration: document.getElementById('duration').value || '00:00',
                 coverPath: ''
               };
 
@@ -529,104 +595,17 @@
             row.style.display = text.includes(term) ? '' : 'none';
           });
         });
+
+        window.addEventListener('click', function (e) {
+          const popup = document.getElementById('uploadPopup');
+          if (e.target === popup) closeUploadPopup();
+        });
       });
     </script>
-      window.addEventListener('click', function (e) {
-        const popup = document.getElementById('uploadPopup');
-        if (e.target === popup) closeUploadPopup();
-      });
 
-      function formatDuration(seconds) {
-        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-        const s = Math.floor(seconds % 60).toString().padStart(2, '0');
-        return m + ':' + s;
-      }
-
-      function handleFileChange() {
-        const fileInput = document.getElementById('file');
-        const fileName = document.getElementById('fileName');
-        const durationLabel = document.getElementById('durationLabel');
-        const coverPreview = document.getElementById('coverPreview');
-
-        if (fileInput.files.length === 0) {
-          fileName.textContent = 'Chọn file mp3';
-          durationLabel.textContent = 'Thời lượng: 00:00';
-          coverPreview.textContent = 'Không có ảnh bìa';
-          coverPreview.style.backgroundImage = 'none';
-          return;
-        }
-
-        const file = fileInput.files[0];
-        fileName.textContent = file.name;
-
-        const audio = document.createElement('audio');
-        audio.preload = 'metadata';
-        audio.src = URL.createObjectURL(file);
-
-        audio.addEventListener('loadedmetadata', function () {
-          durationLabel.textContent = 'Thời lượng: ' + formatDuration(audio.duration);
-          URL.revokeObjectURL(audio.src);
-        });
-
-        coverPreview.textContent = '';
-        coverPreview.style.backgroundImage = 'linear-gradient(135deg, rgba(66, 74, 149, .6), rgba(32, 37, 78, .6))';
-        coverPreview.style.color = '#e1e4ff';
-      }
-
-      document.addEventListener('DOMContentLoaded', function () {
-        var fileInput = document.getElementById('file');
-        fileInput.addEventListener('change', handleFileChange);
-
-        var form = document.getElementById('uploadSongForm');
-        form.addEventListener('submit', async function (event) {
-          event.preventDefault();
-
-          var formData = new FormData(form);
-          var resultEl = document.getElementById('uploadResult');
-          resultEl.style.color = '#ffffff';
-          resultEl.textContent = 'Đang tải lên...';
-
-          try {
-            const response = await fetch('/Home/UploadSong', {
-              method: 'POST',
-              headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-              },
-              body: formData
-            });
-
-            if (!response.ok) {
-              throw new Error('Lỗi máy chủ');
-            }
-
-            const data = await response.json();
-            if (data.success) {
-              resultEl.style.color = '#95f39f';
-              resultEl.textContent = data.message || 'Thêm bài hát thành công.';
-
-              const durationText = document.getElementById('durationLabel').textContent.replace('Thời lượng:', '').trim();
-              appendSongToList({
-                name: document.getElementById('name').value.trim(),
-                author: document.getElementById('author').value.trim(),
-                album: document.getElementById('album').value || 'Chưa có',
-                genre: document.getElementById('genre').value || 'Chưa có',
-                duration: durationText
-              });
-
-              setTimeout(function () {
-                closeUploadPopup();
-              }, 800);
-            } else {
-              resultEl.style.color = '#ff9494';
-              resultEl.textContent = data.message || 'Xảy ra lỗi khi thêm bài hát.';
-            }
-          } catch (ex) {
-            resultEl.style.color = '#ff9494';
-            resultEl.textContent = 'Lỗi mạng hoặc máy chủ. Vui lòng thử lại.';
-            console.error(ex);
-          }
-        });
-      });
+    <script>
+      // chỉ dùng 1 event handler (đã được khai báo ở script phía trên)
+      // để tránh trùng lặp logic và URL cố định.
     </script>
   <div data-layer="Sidebar" class="Sidebar" style="width: calc(100vw * 0.216); height: calc(100vh - calc(100vh * 0.198)); left: 0px; top: calc(100vh * 0.198); position: absolute; overflow: hidden">
     <div data-layer="SidebarBG" class="Sidebarbg" style="width: calc(100vw * 0.215); height: calc(100vh - calc(100vh * 0.198)); left: 0px; top: 0px; position: absolute; background: linear-gradient(180deg, #818181 0%, #090D4C 100%)"></div>

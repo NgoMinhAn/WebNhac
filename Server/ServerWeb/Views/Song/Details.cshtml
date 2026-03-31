@@ -1,0 +1,21 @@
+@model ServerWeb.Models.Song
+@{
+    ViewData["Title"] = @Model.Name;
+}
+
+<h1>@Model.Name</h1>
+<p>Author: @Model.Author</p>
+<p>Album: @Model.Album</p>
+<p>Genre: @Model.Genre</p>
+<p>Duration: @Model.Duration.ToString(@"mm\:ss")</p>
+@if (!string.IsNullOrEmpty(Model.CoverPath))
+{
+    <img src="/Music/@Model.CoverPath" alt="Cover" style="max-width: 200px;" />
+}
+@if (!string.IsNullOrEmpty(Model.FilePath))
+{
+    <audio controls>
+        <source src="/Music/@Model.FilePath" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+}
