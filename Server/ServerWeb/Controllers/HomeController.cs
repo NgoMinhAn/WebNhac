@@ -24,7 +24,10 @@ namespace ServerWeb.Controllers
 
         public IActionResult Index()
         {
-            return View();
+            var songs = _dbContext.Songs
+                .OrderBy(s => s.Id)
+                .ToList();
+            return View(songs);
         }
 
         public IActionResult Privacy()
