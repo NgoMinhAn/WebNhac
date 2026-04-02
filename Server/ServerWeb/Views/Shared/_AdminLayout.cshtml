@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"] - Quản trị</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="~/css/admin.style.css" asp-append-version="true" />
+</head>
+
+<body class="admin-body">
+    <div class="admin-container">
+        <aside class="admin-sidebar">
+            <div class="admin-logo"><i class="fas fa-user-shield"></i> Admin</div>
+            <nav class="admin-nav">
+                <ul>
+                    <li class="nav-item">
+                        <a href="/Home/Admin/QuanLyBaiHat"><i class="fas fa-music"></i> Bài hát</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/Home/Admin/QuanLyNguoiDung"><i class="fas fa-users"></i> Người dùng</a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <div class="admin-main">
+            <header class="admin-header">
+                <div class="header-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Tìm kiếm nhanh...">
+                </div>
+                <button class="btn-logout-admin">Đăng xuất</button>
+            </header>
+
+            <main class="admin-content-view">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    @RenderSection("Scripts", required: false)
+</body>
+
+</html>

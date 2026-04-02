@@ -1,0 +1,71 @@
+@model IEnumerable<ServerWeb.Models.User>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý người dùng";
+}
+
+<div class="song-management-container">
+    <div class="song-header">
+        <h1 class="song-title">Quản lý người dùng</h1>
+        <button class="btn-add-song" onclick="alert('Tính năng đang phát triển')">+ Thêm người dùng</button>
+    </div>
+
+    <div class="song-data-card">
+        <div class="song-search-container">
+            <div class="song-search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="userSearch" placeholder="Tìm kiếm tên hoặc email...">
+            </div>
+        </div>
+
+        <table class="song-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tên đăng nhập</th>
+                    <th>Email</th>
+                    <th>Số điện thoại</th>
+                    <th>Vai trò</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null)
+                {
+                    foreach (var user in Model)
+                    {
+                        <tr>
+                            <td>#@user.Id</td>
+                            <td><strong>@user.Username</strong></td>
+                            <td>@user.Email</td>
+                            <td>@(user.PhoneNumber ?? "Chưa cập nhật")</td>
+                            <td>
+                                <span class="badge-role">
+                                    @(user.Role ?? "User")
+                                </span>
+                            </td>
+                            <td>
+                                <div class="song-action-icons">
+                                    <i class="fas fa-edit" style="color: #f1c40f; margin-right: 15px; cursor: pointer;"></i>
+                                    <i class="fas fa-trash" style="color: #ff5e5e; cursor: pointer;"></i>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    /* Style cho nhãn vai trò cho chuyên nghiệp */
+    .badge-role {
+        background: rgba(111, 66, 193, 0.2);
+        color: #a29bfe;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        border: 1px solid #6f42c1;
+    }
+</style>
