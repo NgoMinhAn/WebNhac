@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using ServerWeb.Data;
 using ServerWeb.Models;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -15,140 +18,116 @@ namespace ServerWeb.Controllers
             _context = context;
         }
 
-        // GET: Auth/Register
-        public IActionResult Register()
-        {
-            return View();
-        }
+        [HttpGet]
+        public IActionResult Register() => View();
 
-        // POST: Auth/Register
         [HttpPost]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
+                return HandleResponse(false, "Dữ liệu không hợp lệ!", "Register");
+
+            if (model.Password != model.ConfirmPassword)
+                return HandleResponse(false, "Mật khẩu xác nhận không khớp!", "Register");
+
+            var existingUser = _context.Users.FirstOrDefault(u => u.Email == model.Email || u.Username == model.Username);
+            if (existingUser != null)
+                return HandleResponse(false, "Email hoặc tên người dùng đã tồn tại!", "Register");
+
+            var user = new User
             {
-                // Validate that required fields are not null
-                if (string.IsNullOrEmpty(model.Email) || string.IsNullOrEmpty(model.Username) || string.IsNullOrEmpty(model.Password))
-                {
-                    ModelState.AddModelError("", "Email, tên người dùng, và mật khẩu là bắt buộc!");
-                    return HandleAjaxResponse(false, "Email, tên người dùng, và mật khẩu là bắt buộc!");
-                }
+                Email = model.Email!,
+                Username = model.Username!,
+                PasswordHash = HashPassword(model.Password!),
+                PhoneNumber = model.PhoneNumber,
+                Role = "User"
+            };
 
-                // Check if user already exists
-                var existingUser = _context.Users.FirstOrDefault(u => u.Email == model.Email || u.Username == model.Username);
-                if (existingUser != null)
-                {
-                    return HandleAjaxResponse(false, "Email hoặc tên người dùng đã tồn tại!");
-                }
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
 
-                // Create new user
-                var user = new User
-                {
-                    Email = model.Email,
-                    Username = model.Username,
-                    PasswordHash = HashPassword(model.Password),
-                    PhoneNumber = model.PhoneNumber
-                };
+            // Đăng ký xong cho đăng nhập luôn để về trang chủ
+            await SignInUser(user);
 
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
-
-                // Store user info in session
-                HttpContext.Session.SetInt32("UserId", user.Id);
-                HttpContext.Session.SetString("Username", user.Username ?? "");
-                HttpContext.Session.SetString("Email", user.Email ?? "");
-
-                return HandleAjaxResponse(true, "Đăng ký thành công!");
-            }
-
-            var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
-            return HandleAjaxResponse(false, string.Join(" ", errors));
+            return HandleResponse(true, "Đăng ký thành công!", "Index", "Home");
         }
 
-        // GET: Auth/Login
-        public IActionResult Login()
-        {
-            return View();
-        }
+        [HttpGet]
+        public IActionResult Login() => View();
 
-        // POST: Auth/Login
         [HttpPost]
-        public IActionResult Login(LoginViewModel model)
+        public async Task<IActionResult> Login(LoginViewModel model)
         {
-            if (ModelState.IsValid)
+            if (string.IsNullOrEmpty(model.Email) || string.IsNullOrEmpty(model.Password))
+                return HandleResponse(false, "Vui lòng nhập đầy đủ thông tin!", "Login");
+
+            var user = _context.Users.FirstOrDefault(u => u.Email == model.Email || u.Username == model.Email);
+
+            if (user != null && VerifyPassword(model.Password, user.PasswordHash))
             {
-                // Validate that required fields are not null
-                if (string.IsNullOrEmpty(model.Email) || string.IsNullOrEmpty(model.Password))
-                {
-                    return HandleAjaxResponse(false, "Email/Tên người dùng và mật khẩu là bắt buộc!");
-                }
+                await SignInUser(user);
 
-                var user = _context.Users.FirstOrDefault(u => u.Email == model.Email || u.Username == model.Email);
-                
-                if (user != null && VerifyPassword(model.Password, user.PasswordHash))
-                {
-                    // Store user info in session
-                    HttpContext.Session.SetInt32("UserId", user.Id);
-                    HttpContext.Session.SetString("Username", user.Username ?? "");
-                    HttpContext.Session.SetString("Email", user.Email ?? "");
-
-                    return HandleAjaxResponse(true, "Đăng nhập thành công!");
-                }
-
-                return HandleAjaxResponse(false, "Email/Tên người dùng hoặc mật khẩu không chính xác!");
+                // Đăng nhập xong quay về trang chủ
+                return HandleResponse(true, "Đăng nhập thành công!", "Index", "Home");
             }
 
-            var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
-            return HandleAjaxResponse(false, string.Join(" ", errors));
+            return HandleResponse(false, "Tài khoản hoặc mật khẩu không chính xác!", "Login");
         }
 
-        // GET: Auth/Logout
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
-            HttpContext.Session.Clear();
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Index", "Home");
         }
 
-        // Helper method to hash password
+        public IActionResult AccessDenied() => View();
+
+        // --- Helpers ---
+
+        private async Task SignInUser(User user)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Username ?? ""),
+                new Claim(ClaimTypes.Email, user.Email ?? ""),
+                new Claim(ClaimTypes.Role, user.Role ?? "User")
+            };
+
+            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var authProperties = new AuthenticationProperties { IsPersistent = true };
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(claimsIdentity),
+                authProperties);
+        }
+
         private string HashPassword(string password)
         {
-            using (var sha256 = SHA256.Create())
-            {
-                var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-                return Convert.ToBase64String(hashedBytes);
-            }
+            if (string.IsNullOrEmpty(password)) return string.Empty;
+            using var sha256 = SHA256.Create();
+            var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+            return Convert.ToBase64String(hashedBytes);
         }
 
-        // Helper method to verify password
         private bool VerifyPassword(string password, string hash)
-        {
-            var hashOfInput = HashPassword(password);
-            return hashOfInput.Equals(hash);
-        }
+            => HashPassword(password) == hash;
 
-        // Helper method to handle AJAX responses
-        private IActionResult HandleAjaxResponse(bool success, string message)
+        // Hàm xử lý phản hồi thông minh: Nếu là Ajax (Modal) thì trả về Json, nếu là Form thường thì Redirect
+        private IActionResult HandleResponse(bool success, string message, string action, string controller = "Auth")
         {
+            // Kiểm tra xem yêu cầu có phải từ Ajax (Modal) không
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
-                return Json(new { success, message });
+                return Json(new { success, message, redirectUrl = Url.Action(action, controller) });
             }
-            else
-            {
-                if (success)
-                {
-                    return RedirectToAction("Index", "Home");
-                }
-                else
-                {
-                    TempData["Error"] = message;
-                    return RedirectToAction("Index", "Home");
-                }
-            }
+
+            if (!success) TempData["Error"] = message;
+            return RedirectToAction(action, controller);
         }
     }
 
-    // View Models
     public class RegisterViewModel
     {
         public string? Email { get; set; }

@@ -1,16 +1,27 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using ServerWeb.Data; // nhớ đúng namespace DbContext của bạn
+using ServerWeb.Data;
+using Microsoft.AspNetCore.Authentication.Cookies; // Thêm dòng này
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 🔥 Thêm dòng này để kết nối DB
+// 1. Kết nối Database
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add services to the container.
+// 2. 🔥 CẤU HÌNH XÁC THỰC COOKIE (Khắc phục lỗi InvalidOperationException)
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Auth/Login"; // Đường dẫn nếu chưa đăng nhập
+        options.AccessDeniedPath = "/Auth/AccessDenied";
+        options.Cookie.Name = "MusicApp_Auth"; // Tên Cookie lưu trên máy khách
+        options.ExpireTimeSpan = TimeSpan.FromDays(7); // Ghi nhớ trong 7 ngày
+    });
+
+// 3. Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Add Session support
+// 4. Add Session support
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -28,17 +39,17 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles(); // Thay cho MapStaticAssets nếu bạn dùng bản .NET cũ hơn, hoặc giữ nguyên nếu dùng .NET 9
+
 app.UseRouting();
 
-app.UseSession();
-
-app.UseAuthorization();
-
-app.MapStaticAssets();
+// 5. THỨ TỰ MIDDLEWARE (Rất quan trọng)
+app.UseSession();         // 1. Session trước
+app.UseAuthentication();  // 2. Authentication (Xác thực) - PHẢI TRƯỚC Authorization
+app.UseAuthorization();   // 3. Authorization (Phân quyền)
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();

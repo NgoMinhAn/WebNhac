@@ -1,11 +1,15 @@
-using System.Diagnostics;
-using System.IO;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using ServerWeb.Data;
 using ServerWeb.Models;
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace ServerWeb.Controllers
 {
@@ -22,26 +26,40 @@ namespace ServerWeb.Controllers
             _env = env;
         }
 
+        // 1. Trang chủ cho người dùng
         public IActionResult Index()
         {
-            var songs = _dbContext.Songs
-                .OrderBy(s => s.Id)
-                .ToList();
+            var songs = _dbContext.Songs.OrderBy(s => s.Id).ToList();
             return View(songs);
         }
 
-        public IActionResult Privacy()
-        {
-            return View();
-        }
-
+        // 2. Trang Quản lý chính (Admin)
+        // Đường dẫn: /Home/Admin
         public IActionResult Admin()
         {
-            var songs = _dbContext.Songs
-                .OrderBy(s => s.Id)
-                .ToList();
-            return View(songs);
+            return RedirectToAction("QuanLyBaiHat");
         }
+
+        // 3. Quản lý bài hát (Trỏ trực tiếp vào thư mục Views/Admin)
+        // Đường dẫn: /Home/Admin/QuanLyBaiHat
+        // Chỉ những ai có Role là 'Admin' mới được vào các hàm này
+        [Authorize(Roles = "Admin")]
+        [Route("Home/Admin/QuanLyBaiHat")]
+        public IActionResult QuanLyBaiHat()
+        {
+            var songs = _dbContext.Songs.ToList();
+            return View("~/Views/Admin/QuanLyBaiHat.cshtml", songs);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [Route("Home/Admin/QuanLyNguoiDung")]
+        public IActionResult QuanLyNguoiDung()
+        {
+            var users = _dbContext.Users.ToList();
+            return View("~/Views/Admin/QuanLyNguoiDung.cshtml", users);
+        }
+    
+        // --- CÁC HÀM XỬ LÝ DỮ LIỆU (POST/API) ---
 
         public class SongIdRequest { public int Id { get; set; } }
 
@@ -51,25 +69,9 @@ namespace ServerWeb.Controllers
             var song = await _dbContext.Songs.FindAsync(request.Id);
             if (song == null) return Json(new { success = false, message = "Bài hát không tồn tại" });
 
-            if (!string.IsNullOrEmpty(song.FilePath))
-            {
-                try
-                {
-                    var fullPath = Path.Combine(_env.WebRootPath, song.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                    if (System.IO.File.Exists(fullPath)) System.IO.File.Delete(fullPath);
-                }
-                catch { }
-            }
-
-            if (!string.IsNullOrEmpty(song.CoverPath))
-            {
-                try
-                {
-                    var fullPath = Path.Combine(_env.WebRootPath, song.CoverPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                    if (System.IO.File.Exists(fullPath)) System.IO.File.Delete(fullPath);
-                }
-                catch { }
-            }
+            // Xóa file vật lý
+            DeletePhysicalFile(song.FilePath);
+            DeletePhysicalFile(song.CoverPath);
 
             _dbContext.Songs.Remove(song);
             await _dbContext.SaveChangesAsync();
@@ -89,19 +91,14 @@ namespace ServerWeb.Controllers
 
             if (!string.IsNullOrEmpty(duration))
             {
-                // Prefer mm:ss input and fallback to common TimeSpan patterns
                 if (TimeSpan.TryParseExact(duration.Trim(), new[] { "m\\:ss", "mm\\:ss", "h\\:mm\\:ss", "hh\\:mm\\:ss" }, null, out var parsedDuration))
-                {
-                    song.Duration = parsedDuration;
-                }
-                else if (TimeSpan.TryParse(duration.Trim(), out parsedDuration))
                 {
                     song.Duration = parsedDuration;
                 }
             }
 
             await _dbContext.SaveChangesAsync();
-            return Json(new { success = true, message = "Cập nhật bài hát thành công.", song = new { song.Id, song.Name, song.Author, song.Album, song.Genre, duration = song.Duration.ToString(@"mm\:ss"), song.CoverPath } });
+            return Json(new { success = true, message = "Cập nhật thành công.", song = new { song.Id, song.Name, song.Author, song.Album, song.Genre, duration = song.Duration.ToString(@"mm\:ss"), song.CoverPath } });
         }
 
         [HttpGet]
@@ -115,38 +112,24 @@ namespace ServerWeb.Controllers
         {
             bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
 
-            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(author) || string.IsNullOrWhiteSpace(album) || string.IsNullOrWhiteSpace(genre) || file == null || file.Length == 0)
+            if (string.IsNullOrWhiteSpace(name) || file == null)
             {
-                if (isAjax)
-                {
-                    return Json(new { success = false, message = "Vui lòng điền đầy đủ thông tin và chọn tệp âm thanh." });
-                }
-
-                ModelState.AddModelError(string.Empty, "Vui lòng điền đầy đủ thông tin và chọn tệp âm thanh.");
+                if (isAjax) return Json(new { success = false, message = "Thiếu thông tin." });
                 return View();
             }
 
-            var musicFolder = Path.Combine(_env.WebRootPath, "Music");
-            Directory.CreateDirectory(musicFolder);
-
+            // Lưu file
             var fileName = Path.GetFileName(file.FileName);
-            var filePath = Path.Combine(musicFolder, fileName);
-
-            using (var fileStream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(fileStream);
-            }
+            var musicPath = Path.Combine(_env.WebRootPath, "Music", fileName);
+            using (var stream = new FileStream(musicPath, FileMode.Create)) { await file.CopyToAsync(stream); }
 
             string? coverPath = null;
-            if (cover != null && cover.Length > 0)
+            if (cover != null)
             {
-                var coversFolder = Path.Combine(_env.WebRootPath, "Covers");
-                Directory.CreateDirectory(coversFolder);
-                var coverFileName = Path.GetFileName(cover.FileName);
-                var coverFilePath = Path.Combine(coversFolder, coverFileName);
-                using var coverStream = new FileStream(coverFilePath, FileMode.Create);
-                await cover.CopyToAsync(coverStream);
-                coverPath = $"/Covers/{coverFileName}";
+                var coverName = Path.GetFileName(cover.FileName);
+                var coverFullPath = Path.Combine(_env.WebRootPath, "Covers", coverName);
+                using (var stream = new FileStream(coverFullPath, FileMode.Create)) { await cover.CopyToAsync(stream); }
+                coverPath = $"/Covers/{coverName}";
             }
 
             var song = new Song
@@ -160,44 +143,30 @@ namespace ServerWeb.Controllers
                 Duration = TimeSpan.Zero
             };
 
-            if (!string.IsNullOrEmpty(duration))
-            {
-                if (TimeSpan.TryParseExact(duration.Trim(), new[] { "m\\:ss", "mm\\:ss", "h\\:mm\\:ss", "hh\\:mm\\:ss" }, null, out var parsedDuration))
-                {
-                    song.Duration = parsedDuration;
-                }
-                else if (TimeSpan.TryParse(duration.Trim(), out parsedDuration))
-                {
-                    song.Duration = parsedDuration;
-                }
-            }
+            if (TimeSpan.TryParse(duration, out var d)) song.Duration = d;
 
             _dbContext.Songs.Add(song);
             await _dbContext.SaveChangesAsync();
 
-            if (isAjax)
-            {
-                var jsonSong = new
-                {
-                    song.Id,
-                    song.Name,
-                    song.Author,
-                    song.Album,
-                    song.Genre,
-                    duration = song.Duration.ToString(@"mm\:ss"),
-                    song.CoverPath
-                };
-                return Json(new { success = true, message = "Thêm bài hát thành công.", song = jsonSong });
-            }
+            if (isAjax) return Json(new { success = true, song });
 
-            TempData["SuccessMessage"] = "Thêm bài hát thành công.";
-            return RedirectToAction("Admin");
+            return RedirectToAction("QuanLyBaiHat");
         }
+
+        private void DeletePhysicalFile(string? path)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+            try
+            {
+                var fullPath = Path.Combine(_env.WebRootPath, path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (System.IO.File.Exists(fullPath)) System.IO.File.Delete(fullPath);
+            }
+            catch { }
+        }
+
+        public IActionResult Privacy() => View();
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
+        public IActionResult Error() => View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 }

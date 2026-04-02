@@ -1,0 +1,42 @@
+@model IEnumerable<ServerWeb.Models.Song>
+@{
+    Layout = "_AdminLayout";
+}
+
+<div class="song-management-container">
+    <div class="song-header">
+        <h1>Quản lý bài hát</h1>
+        <button class="btn-add-song" onclick="location.href='/Home/UploadSong'">+ Thêm bài hát</button>
+    </div>
+
+    <div class="song-data-card">
+        <table class="song-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tên</th>
+                    <th>Nghệ sĩ</th>
+                    <th>Album</th>
+                    <th>Thời lượng</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Id</td>
+                        <td>@item.Name</td>
+                        <td>@item.Author</td>
+                        <td>@item.Album</td>
+                        <td>@item.Duration.ToString(@"mm\:ss")</td>
+                        <td>
+                            <i class="fas fa-edit" onclick="editSong(@item.Id)"></i>
+                            <i class="fas fa-trash" onclick="deleteSong(@item.Id)"></i>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

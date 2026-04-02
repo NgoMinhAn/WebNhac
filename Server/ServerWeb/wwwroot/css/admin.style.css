@@ -1,0 +1,134 @@
+:root {
+    --admin-purple: #a349a4;
+    --admin-bg: #11081a;
+    --admin-card: #23272f;
+}
+
+.admin-body {
+    margin: 0;
+    background: var(--admin-bg);
+    color: white;
+    font-family: sans-serif;
+    overflow: hidden;
+}
+
+.admin-container {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    height: 100vh;
+}
+
+.admin-sidebar {
+    background: #1a1a24;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px 0;
+}
+
+.admin-logo {
+    padding: 0 30px 30px;
+    font-size: 22px;
+    font-weight: bold;
+    color: var(--admin-purple);
+}
+
+.admin-nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+.admin-nav li {
+    padding: 15px 30px;
+    transition: 0.3s;
+}
+
+.admin-nav li.active,
+.admin-nav li:hover {
+    background: rgba(163, 73, 164, 0.2);
+    border-left: 4px solid var(--admin-purple);
+}
+
+.admin-nav li a {
+    color: #ccc;
+    text-decoration: none;
+    display: flex;
+    gap: 15px;
+}
+
+.admin-main {
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, #3d1b5d 0%, #11081a 100%);
+}
+
+.admin-header {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+}
+
+.header-search {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px 20px;
+    border-radius: 10px;
+    width: 300px;
+}
+
+.header-search input {
+    background: none;
+    border: none;
+    color: white;
+    outline: none;
+    margin-left: 10px;
+}
+
+.admin-content-view {
+    padding: 30px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.management-card {
+    background: var(--admin-card);
+    border-radius: 15px;
+    padding: 25px;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.admin-table th {
+    text-align: left;
+    color: #888;
+    padding: 12px;
+    border-bottom: 1px solid #444;
+}
+
+.admin-table td {
+    padding: 15px 12px;
+    border-bottom: 1px solid #333;
+}
+
+.btn-add-new {
+    background: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.i-edit {
+    color: #f1c40f;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.i-delete {
+    color: #ff5e5e;
+    cursor: pointer;
+}

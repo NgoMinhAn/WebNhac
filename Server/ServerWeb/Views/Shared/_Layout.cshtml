@@ -1,15 +1,191 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - ServerWeb</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <title>@ViewData["Title"] - Music App</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="~/css/style.css" asp-append-version="true" />
+
+    @await RenderSectionAsync("Styles", required: false)
 </head>
+
 <body>
-    @Html.AntiForgeryToken()
-    @RenderBody()
+    <div class="main-wrapper">
+        <aside class="side-menu">
+            <div class="logo">
+                <i class="fas fa-music"></i>
+                <span>Music</span>
+            </div>
+
+            <ul class="nav-links">
+                <li class="active"><a href="/"><i class="fas fa-home"></i> Trang chủ</a></li>
+                <li><a href="#"><i class="fas fa-book-open"></i> Thư viện</a></li>
+                <li><a href="#"><i class="fas fa-compass"></i> Khám phá</a></li>
+                <li><a href="#"><i class="fas fa-list"></i> Danh sách phát</a></li>
+            </ul>
+
+            <button class="btn-create-playlist">
+                <i class="fas fa-plus"></i> Tạo playlist mới
+            </button>
+        </aside>
+
+        <div class="right-section">
+            <nav class="top-navbar">
+                <div class="nav-breadcrumb">Trang chủ</div>
+
+                <div class="search-container">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Tìm kiếm nội dung">
+                    </div>
+                </div>
+
+                <div class="auth-buttons">
+                    @if (User.Identity != null && User.Identity.IsAuthenticated)
+                    {
+                        <div class="user-info" style="display: flex; align-items: center; gap: 15px;">
+                            <span style="color: white; font-weight: 600;">
+                                <i class="fas fa-user-circle"></i> @User.Identity.Name
+                            </span>
+                            <a href="/Auth/Logout" class="btn-logout"
+                                style="color: #ff4d4d; text-decoration: none; font-size: 14px; font-weight: 700;">
+                                Đăng xuất
+                            </a>
+                        </div>
+                    }
+                    else
+                    {
+                        <button class="btn-signup" onclick="openAuth('register')">Đăng ký</button>
+                        <button class="btn-login" onclick="openAuth('login')">Đăng nhập</button>
+                    }
+                </div>
+            </nav>
+
+            <main class="content-area">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <div id="authModal" class="auth-overlay" onclick="closeAuth(event)">
+        <div class="auth-card" onclick="event.stopPropagation()">
+            <span class="close-x" onclick="closeAuth(null)">&times;</span>
+            <div id="authContent">
+            </div>
+        </div>
+    </div>
+
     @await RenderSectionAsync("Scripts", required: false)
+
+    <script>
+        // Hàm mở Modal và đổ nội dung HTML tương ứng
+        function openAuth(type) {
+            const modal = document.getElementById('authModal');
+            const content = document.getElementById('authContent');
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            if (type === 'login') {
+                content.innerHTML = `
+                    <h2 class="auth-title">Chào mừng đến với âm nhạc</h2>
+                    <div class="auth-subtitle">Đăng nhập để tiếp tục</div>
+                    <form onsubmit="handleAuthSubmit(event, 'login')" action="/Auth/Login" method="post">
+                        <div class="auth-field">
+                            <label>E-mail hoặc tên người dùng</label>
+                            <input type="text" name="Email" placeholder="Nhập email hoặc tên người dùng" required>
+                        </div>
+                        <div class="auth-field">
+                            <label>Mật khẩu</label>
+                            <input type="password" name="Password" placeholder="Nhập mật khẩu" required>
+                        </div>
+                        <button type="submit" class="btn-continue">Đăng nhập</button>
+                    </form>
+                    <div class="auth-or">Hoặc</div>
+                    <button class="btn-social btn-phone"><i class="fas fa-mobile-alt"></i> Đăng nhập bằng số điện thoại</button>
+                    <button class="btn-social btn-fb"><i class="fab fa-facebook"></i> Đăng nhập bằng Facebook</button>
+                    <p class="auth-footer">Bạn chưa có tài khoản? <a href="javascript:openAuth('register')">Đăng ký ngay</a></p>
+                `;
+            } else {
+                content.innerHTML = `
+                    <h2 class="auth-title">Đăng ký để bắt đầu thưởng thức âm nhạc</h2>
+                    <form onsubmit="handleAuthSubmit(event, 'register')" action="/Auth/Register" method="post">
+                        <div class="auth-field">
+                            <label>Địa chỉ e-mail</label>
+                            <input type="email" name="Email" placeholder="vd: name@domain.com" required>
+                        </div>
+                        <div class="auth-field">
+                            <label>Tên đăng nhập</label>
+                            <input type="text" name="Username" placeholder="Tên hiển thị của bạn" required>
+                        </div>
+                        <div class="auth-field">
+                            <label>Mật khẩu</label>
+                            <input type="password" name="Password" id="regPassword" placeholder="Nhập mật khẩu" required>
+                        </div>
+                        <div class="auth-field">
+                            <label>Xác nhận mật khẩu</label>
+                            <input type="password" name="ConfirmPassword" id="regConfirm" placeholder="Nhập lại mật khẩu" required>
+                        </div>
+                        <button type="submit" class="btn-continue">Đăng ký</button>
+                    </form>
+                    <div class="auth-or">Hoặc</div>
+                    <button class="btn-social btn-phone" style="background:#b2fcf0; color:#004d40;"><i class="fas fa-mobile-alt"></i> Đăng ký bằng số điện thoại</button>
+                    <button class="btn-social btn-fb" style="background:#8cd4ff; color:#003354;"><i class="fab fa-facebook"></i> Đăng ký bằng Facebook</button>
+                    <p class="auth-footer">Bạn đã có tài khoản? <a href="javascript:openAuth('login')">Đăng nhập</a></p>
+                `;
+            }
+        }
+
+        // Hàm xử lý gửi form qua AJAX để đọc RedirectUrl
+        function handleAuthSubmit(e, type) {
+            e.preventDefault();
+            const form = e.target;
+
+            // Kiểm tra mật khẩu khớp nhau khi đăng ký
+            if (type === 'register') {
+                const pass = document.getElementById('regPassword').value;
+                const confirm = document.getElementById('regConfirm').value;
+                if (pass !== confirm) {
+                    alert("Mật khẩu xác nhận không khớp!");
+                    return;
+                }
+            }
+
+            const formData = new FormData(form);
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest' // Báo cho Controller biết đây là AJAX
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Nếu thành công, chuyển hướng trang theo yêu cầu
+                        window.location.href = data.redirectUrl || '/';
+                    } else {
+                        // Nếu lỗi, hiển thị thông báo
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Đã có lỗi xảy ra, vui lòng thử lại.');
+                });
+        }
+
+        // Hàm đóng Modal
+        function closeAuth(e) {
+            if (!e || e.target.id === 'authModal') {
+                document.getElementById('authModal').style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+        }
+    </script>
 </body>
+
 </html>
