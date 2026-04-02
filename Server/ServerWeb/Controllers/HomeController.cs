@@ -120,14 +120,16 @@ namespace ServerWeb.Controllers
             }
 
             // Lưu file
-            var fileName = Path.GetFileName(file.FileName);
+            var fileExtension = Path.GetExtension(file.FileName);
+            var fileName = Guid.NewGuid().ToString() + fileExtension;
             var musicPath = Path.Combine(_env.WebRootPath, "Music", fileName);
             using (var stream = new FileStream(musicPath, FileMode.Create)) { await file.CopyToAsync(stream); }
 
             string? coverPath = null;
             if (cover != null)
             {
-                var coverName = Path.GetFileName(cover.FileName);
+                var coverExtension = Path.GetExtension(cover.FileName);
+                var coverName = Guid.NewGuid().ToString() + coverExtension;
                 var coverFullPath = Path.Combine(_env.WebRootPath, "Covers", coverName);
                 using (var stream = new FileStream(coverFullPath, FileMode.Create)) { await cover.CopyToAsync(stream); }
                 coverPath = $"/Covers/{coverName}";
