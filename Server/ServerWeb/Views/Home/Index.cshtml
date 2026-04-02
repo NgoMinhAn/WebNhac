@@ -2,6 +2,10 @@
 
 @{
   ViewData["Title"] = "Trang chủ";
+  var allSongs = Model.ToList();
+
+  var firstSectionSongs = allSongs.Take(4).ToList();
+  var secondSectionSongs = allSongs.Skip(4).Take(4).ToList();
 }
 
 @section Styles {
@@ -45,9 +49,9 @@
       <h2>Đề xuất cho bạn</h2>
     </div>
     <div class="card-grid">
-      @foreach (var song in Model.Take(4))
+      @foreach (var song in firstSectionSongs)
       {
-        <div class="music-card">
+        <div class="music-card" data-song-id="@song.Id" data-song-name="@Html.Encode(@Json.Serialize(song.Name))" data-song-author="@Html.Encode(@Json.Serialize(song.Author))" data-file-path="@Url.Content(song.FilePath)" data-cover-path="@Url.Content(song.CoverPath)" onclick="playSongFromCard(this)">
           @if (!string.IsNullOrEmpty(song.CoverPath))
           {
             <div class="card-thumb" style="background-image: url('@song.CoverPath'); background-size: cover; background-position: center;">
@@ -75,9 +79,9 @@
       <a href="#" class="view-all">Hiển thị tất cả</a>
     </div>
     <div class="card-grid">
-      @foreach (var song in Model.Skip(4).Take(4))
+      @foreach (var song in secondSectionSongs)
       {
-        <div class="music-card">
+        <div class="music-card" data-song-id="@song.Id" data-song-name="@Html.Encode(@Json.Serialize(song.Name))" data-song-author="@Html.Encode(@Json.Serialize(song.Author))" data-file-path="@Url.Content(song.FilePath)" data-cover-path="@Url.Content(song.CoverPath)" onclick="playSongFromCard(this)">
           @if (!string.IsNullOrEmpty(song.CoverPath))
           {
             <div class="card-thumb" style="background-image: url('@song.CoverPath'); background-size: cover; background-position: center;">
@@ -96,10 +100,167 @@
           </div>
         </div>
       }
-      @if (Model.Count() <= 4)
+      @if (secondSectionSongs.Count == 0)
       {
-        <p style="grid-column: 1 / -1; text-align: center; color: #999;">Thêm bài hát để hiển thị</p>
+        <p style="grid-column: 1 / -1; text-align: center; color: #999;">Chưa có bài hát nào trong phần này. Tổng số bài hát gốc: @Model.Count()</p>
       }
     </div>
   </section>
 </div>
+
+@section Scripts {
+  <script>
+    let currentAudio = null;
+    let isPlaying = false;
+    let currentSongId = null;
+
+    function decodeHtmlEntities(str) {
+      const textarea = document.createElement('textarea');
+      textarea.innerHTML = str;
+      return textarea.value;
+    }
+
+    function playSongFromCard(cardElement) {
+      const songId = cardElement.getAttribute('data-song-id');
+      const name = JSON.parse(decodeHtmlEntities(cardElement.getAttribute('data-song-name')));
+      const author = JSON.parse(decodeHtmlEntities(cardElement.getAttribute('data-song-author')));
+      const filePath = cardElement.getAttribute('data-file-path');
+      const coverPath = cardElement.getAttribute('data-cover-path');
+
+      console.log('Clicked song:', songId, name);
+      playSong(songId, name, author, filePath, coverPath);
+    }
+
+    function playSong(songId, name, author, filePath, coverPath) {
+      console.log('Attempting to play song:', { songId, name, author, filePath, coverPath });
+
+      // If clicking the same song, toggle play/pause
+      if (currentSongId === songId) {
+        togglePlayPause();
+        return;
+      }
+
+      // Stop and cleanup current song
+      stopCurrentSong();
+
+      // Create new audio element
+      currentAudio = new Audio();
+      const normalizedPath = encodeURI(filePath.trim());
+      currentAudio.src = normalizedPath;
+      currentSongId = songId;
+
+      // Update player display
+      updatePlayerDisplay(name, author, coverPath);
+
+          // Set up event listeners
+          currentAudio.addEventListener('loadedmetadata', function() {
+            console.log('Audio metadata loaded, duration:', currentAudio.duration);
+            updateProgressBar();
+          });
+
+          currentAudio.addEventListener('timeupdate', function() {
+            updateProgressBar();
+          });
+
+          currentAudio.addEventListener('ended', function() {
+            console.log('Song ended');
+            isPlaying = false;
+            updatePlayButton();
+          });
+
+          currentAudio.addEventListener('error', function(e) {
+            // Audio loading error - but song may still play, so don't log or alert
+            stopCurrentSong();
+          });
+
+          currentAudio.addEventListener('canplay', function() {
+            console.log('Audio can play, ready to start');
+          });
+
+          // Start playing immediately
+          currentAudio.play().then(() => {
+            console.log('Audio started playing');
+            isPlaying = true;
+            updatePlayButton();
+          }).catch(error => {
+            if (error.name !== 'AbortError') {
+              console.error('Error playing audio:', error);
+              // Don't alert for now
+            }
+          });
+    }
+
+    function stopCurrentSong() {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        currentAudio.src = '';
+        currentAudio = null;
+      }
+      isPlaying = false;
+      currentSongId = null;
+      updatePlayButton();
+    }
+
+    function togglePlayPause() {
+      if (!currentAudio) {
+        console.log('No current audio to toggle');
+        return;
+      }
+
+      if (isPlaying) {
+        currentAudio.pause();
+        isPlaying = false;
+      } else {
+        currentAudio.play().then(() => {
+          isPlaying = true;
+        }).catch(error => {
+          console.error('Error resuming playback:', error);
+        });
+      }
+      updatePlayButton();
+    }
+
+    function updatePlayerDisplay(name, author, coverPath) {
+      const videoDisplay = document.querySelector('.video-display');
+      if (coverPath) {
+        videoDisplay.style.backgroundImage = `url('${coverPath}')`;
+        videoDisplay.style.backgroundSize = 'cover';
+        videoDisplay.style.backgroundPosition = 'center';
+        videoDisplay.innerHTML = '';
+      } else {
+        videoDisplay.style.backgroundImage = 'none';
+        videoDisplay.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;"><i class="fas fa-music fa-3x"></i></div>';
+      }
+
+      // You could add song info display here if needed
+    }
+
+    function updatePlayButton() {
+      const playButton = document.querySelector('.play-circle i');
+      playButton.className = isPlaying ? 'fas fa-pause' : 'fas fa-play';
+    }
+
+    function updateProgressBar() {
+      if (!currentAudio) return;
+
+      const progressBar = document.querySelector('.progress-bar');
+      const progress = (currentAudio.currentTime / currentAudio.duration) * 100;
+      progressBar.style.width = progress + '%';
+    }
+
+    // Set up player controls
+    document.addEventListener('DOMContentLoaded', function() {
+      const playButton = document.querySelector('.play-circle');
+      const prevButton = document.querySelector('.fa-step-backward');
+      const nextButton = document.querySelector('.fa-step-forward');
+
+      if (playButton) {
+        playButton.addEventListener('click', togglePlayPause);
+      }
+
+      // Add click handlers for other controls if needed
+      // For now, just basic play/pause functionality
+    });
+  </script>
+}
