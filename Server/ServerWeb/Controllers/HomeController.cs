@@ -63,6 +63,7 @@ namespace ServerWeb.Controllers
 
         public class SongIdRequest { public int Id { get; set; } }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> DeleteSong([FromBody] SongIdRequest request)
         {
@@ -143,7 +144,13 @@ namespace ServerWeb.Controllers
                 Duration = TimeSpan.Zero
             };
 
-            if (TimeSpan.TryParse(duration, out var d)) song.Duration = d;
+            if (!string.IsNullOrEmpty(duration))
+            {
+                if (TimeSpan.TryParseExact(duration.Trim(), new[] { "m\\:ss", "mm\\:ss", "h\\:mm\\:ss", "hh\\:mm\\:ss" }, null, out var parsedDuration))
+                {
+                    song.Duration = parsedDuration;
+                }
+            }
 
             _dbContext.Songs.Add(song);
             await _dbContext.SaveChangesAsync();

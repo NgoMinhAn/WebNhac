@@ -98,6 +98,8 @@
 
             <label for="file">Tệp nhạc</label>
             <input type="file" id="file" name="file" accept="audio/*" required />
+            <input type="hidden" id="duration" name="duration" value="" />
+            <div id="durationDisplay" style="margin-bottom: 12px; color: #b8d1ff; font-size: .9rem;">Thời lượng chưa được xác định</div>
 
             <button type="submit">Lưu bài hát</button>
         </form>
@@ -105,3 +107,47 @@
         <a class="back-link" href="/Home/Admin">Quay lại Admin</a>
     </div>
 </div>
+
+<script>
+    const fileInput = document.getElementById('file');
+    const durationInput = document.getElementById('duration');
+    const durationDisplay = document.getElementById('durationDisplay');
+
+    fileInput.addEventListener('change', function () {
+        const file = this.files?.[0];
+        durationInput.value = '';
+        durationDisplay.textContent = 'Đang xác định thời lượng...';
+
+        if (!file) {
+            durationDisplay.textContent = 'Chưa chọn file.';
+            return;
+        }
+
+        const audio = document.createElement('audio');
+        audio.preload = 'metadata';
+
+        audio.onloadedmetadata = function () {
+            window.URL.revokeObjectURL(audio.src);
+            if (isNaN(audio.duration) || !isFinite(audio.duration)) {
+                durationDisplay.textContent = 'Không thể xác định thời lượng';
+                durationInput.value = '';
+                return;
+            }
+
+            const totalSeconds = Math.floor(audio.duration);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const formatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+            durationInput.value = formatted;
+            durationDisplay.textContent = 'Thời lượng: ' + formatted;
+        };
+
+        audio.onerror = function () {
+            durationDisplay.textContent = 'Không thể đọc tệp âm thanh';
+            durationInput.value = '';
+        };
+
+        audio.src = URL.createObjectURL(file);
+    });
+</script>

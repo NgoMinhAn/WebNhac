@@ -1,4 +1,6 @@
-﻿@{
+﻿@model IEnumerable<ServerWeb.Models.Song>
+
+@{
   ViewData["Title"] = "Trang chủ";
 }
 
@@ -43,13 +45,24 @@
       <h2>Đề xuất cho bạn</h2>
     </div>
     <div class="card-grid">
-      @for (int i = 0; i < 4; i++)
+      @foreach (var song in Model.Take(4))
       {
         <div class="music-card">
-          <div class="card-thumb"><span>Time stamp</span></div>
+          @if (!string.IsNullOrEmpty(song.CoverPath))
+          {
+            <div class="card-thumb" style="background-image: url('@song.CoverPath'); background-size: cover; background-position: center;">
+              <span>@song.Duration.ToString(@"mm\:ss")</span>
+            </div>
+          }
+          else
+          {
+            <div class="card-thumb">
+              <span>@song.Duration.ToString(@"mm\:ss")</span>
+            </div>
+          }
           <div class="card-info">
-            <h3>Song Name</h3>
-            <p>Song Artist</p>
+            <h3>@song.Name</h3>
+            <p>@song.Author</p>
           </div>
         </div>
       }
@@ -62,15 +75,30 @@
       <a href="#" class="view-all">Hiển thị tất cả</a>
     </div>
     <div class="card-grid">
-      @for (int i = 0; i < 4; i++)
+      @foreach (var song in Model.Skip(4).Take(4))
       {
         <div class="music-card">
-          <div class="card-thumb"><span>Time stamp</span></div>
+          @if (!string.IsNullOrEmpty(song.CoverPath))
+          {
+            <div class="card-thumb" style="background-image: url('@song.CoverPath'); background-size: cover; background-position: center;">
+              <span>@song.Duration.ToString(@"mm\:ss")</span>
+            </div>
+          }
+          else
+          {
+            <div class="card-thumb">
+              <span>@song.Duration.ToString(@"mm\:ss")</span>
+            </div>
+          }
           <div class="card-info">
-            <h3>Artist Name</h3>
-            <p>Artist</p>
+            <h3>@song.Name</h3>
+            <p>@song.Author</p>
           </div>
         </div>
+      }
+      @if (Model.Count() <= 4)
+      {
+        <p style="grid-column: 1 / -1; text-align: center; color: #999;">Thêm bài hát để hiển thị</p>
       }
     </div>
   </section>

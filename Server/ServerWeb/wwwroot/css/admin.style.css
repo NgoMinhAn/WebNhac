@@ -132,3 +132,220 @@
     color: #ff5e5e;
     cursor: pointer;
 }
+
+.qunl-baihat-admin {
+    width: 1130px;
+    min-height: 899px;
+    margin: 20px auto;
+    position: relative;
+    background: linear-gradient(180deg, rgba(163, 92, 99, 0.98) 0%, rgba(0, 0, 0, 0.98) 100%);
+    border-radius: 24px;
+    overflow: hidden;
+    padding: 32px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.qunl-baihat-title {
+    position: absolute;
+    left: 75px;
+    top: 43px;
+    color: white;
+    font-size: 42px;
+    font-family: Inter, sans-serif;
+    font-weight: 600;
+}
+
+.qunl-baihat-addbtn {
+    position: absolute;
+    right: 39px;
+    top: 46px;
+    width: 217px;
+    height: 48px;
+    border: none;
+    border-radius: 999px;
+    background: white;
+    color: #000;
+    font-family: Poppins, sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.qunl-baihat-card {
+    position: absolute;
+    top: 120px;
+    left: 44px;
+    width: 1071px;
+    height: 715px;
+    background: #4f4f4f;
+    border-radius: 20px;
+    border: 1px solid black;
+    padding: 24px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.qunl-baihat-search {
+    position: relative;
+    width: 1016px;
+    height: 50px;
+    background: #818181;
+    border-radius: 30px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    box-sizing: border-box;
+}
+
+.qunl-baihat-search-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 100px;
+    background: rgba(255, 255, 255, 0.2);
+    margin-right: 15px;
+}
+
+.qunl-baihat-search input {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    color: #fff;
+    font-size: 25px;
+    font-family: Poppins, sans-serif;
+    font-weight: 600;
+    outline: none;
+}
+
+.qunl-baihat-table-wrap {
+    width: 100%;
+    height: calc(100% - 84px);
+    overflow-y: auto;
+}
+
+.qunl-baihat-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: white;
+}
+
+.qunl-baihat-table th,
+.qunl-baihat-table td {
+    padding: 12px 14px;
+    text-align: left;
+}
+
+.qunl-baihat-table thead th {
+    position: sticky;
+    top: 0;
+    background: rgba(79, 79, 79, 0.95);
+    color: white;
+    font-size: 20px;
+    font-family: Poppins, sans-serif;
+    font-weight: 600;
+    border-bottom: 1px solid #999;
+}
+
+.qunl-baihat-table tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+.qunl-baihat-table tbody tr:hover {
+    background: rgba(255,255,255,0.08);
+}
+
+.qunl-baihat-table td {
+    font-size: 16px;
+    font-family: Poppins, sans-serif;
+    color: #f2f2f2;
+}
+
+.action-icons i {
+    margin-right: 12px;
+    cursor: pointer;
+}
+
+.action-icons i.fas.fa-edit {
+    color: #f1c40f;
+}
+
+.action-icons i.fas.fa-trash {
+    color: #ff5e5e;
+}
+
+.delete-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.delete-overlay.hidden {
+    display: none;
+}
+
+.delete-popup {
+    width: min(420px, 90vw);
+    background: #10122e;
+    border: 2px solid #2f3b9d;
+    border-radius: 12px;
+    padding: 26px;
+    text-align: center;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
+}
+
+.delete-popup h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #ff4a4a;
+    font-size: 24px;
+}
+
+.delete-popup p {
+    margin: 0 0 20px;
+    color: #d3d7ff;
+    font-size: 16px;
+}
+
+.delete-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.btn-cancel,
+.btn-delete {
+    width: 120px;
+    border: none;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: Poppins, sans-serif;
+    font-weight: 700;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.btn-cancel {
+    background: #333c60;
+    color: #e9efff;
+}
+
+.btn-delete {
+    background: linear-gradient(130deg, #ff1f1f, #a80000);
+    color: #fff;
+}
+
+.btn-delete:hover {
+    filter: brightness(1.05);
+}
+
+.btn-cancel:hover {
+    filter: brightness(0.95);
+}

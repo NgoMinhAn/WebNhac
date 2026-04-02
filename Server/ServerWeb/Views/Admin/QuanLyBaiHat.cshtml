@@ -3,40 +3,115 @@
     Layout = "_AdminLayout";
 }
 
-<div class="song-management-container">
-    <div class="song-header">
-        <h1>Quản lý bài hát</h1>
-        <button class="btn-add-song" onclick="location.href='/Home/UploadSong'">+ Thêm bài hát</button>
+<div class="qunl-baihat-admin">
+    <div class="qunl-baihat-title">Quản lý bài hát</div>
+
+    <button class="qunl-baihat-addbtn" onclick="location.href='/Home/UploadSong'">Thêm bài hát</button>
+
+    <div class="qunl-baihat-card">
+        <div class="qunl-baihat-search">
+            <span class="qunl-baihat-search-icon">
+                <i class="fas fa-search"></i>
+            </span>
+            <input id="searchInput" type="text" placeholder="Tìm kiếm bài hát..." />
+        </div>
+
+        <div class="qunl-baihat-table-wrap">
+            <table class="qunl-baihat-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tên bài hát</th>
+                        <th>Nghệ sĩ</th>
+                        <th>Album</th>
+                        <th>Thể loại</th>
+                        <th>Thời lượng</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr data-song-id="@item.Id">
+                            <td>@item.Id</td>
+                            <td>@item.Name</td>
+                            <td>@item.Author</td>
+                            <td>@item.Album</td>
+                            <td>@item.Genre</td>
+                            <td>@item.Duration.ToString(@"mm\:ss")</td>
+                            <td class="action-icons">
+                                <i class="fas fa-edit" onclick="editSong(@item.Id)"></i>
+                                <i class="fas fa-trash" onclick="deleteSong(@item.Id)"></i>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <div class="song-data-card">
-        <table class="song-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Tên</th>
-                    <th>Nghệ sĩ</th>
-                    <th>Album</th>
-                    <th>Thời lượng</th>
-                    <th>Hành động</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
-                    <tr>
-                        <td>@item.Id</td>
-                        <td>@item.Name</td>
-                        <td>@item.Author</td>
-                        <td>@item.Album</td>
-                        <td>@item.Duration.ToString(@"mm\:ss")</td>
-                        <td>
-                            <i class="fas fa-edit" onclick="editSong(@item.Id)"></i>
-                            <i class="fas fa-trash" onclick="deleteSong(@item.Id)"></i>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+    <div id="deleteConfirmationOverlay" class="delete-overlay hidden">
+        <div class="delete-popup">
+            <h2>Xóa bài hát</h2>
+            <p>Bạn có chắc muốn xóa bài hát này?</p>
+            <div class="delete-actions">
+                <button type="button" class="btn-cancel" onclick="closeDeletePopup()">Hủy</button>
+                <button type="button" class="btn-delete" onclick="confirmDeleteSong()">Xóa</button>
+            </div>
+        </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        var songToDelete = null;
+
+        document.getElementById('searchInput').addEventListener('input', function (e) {
+            var value = e.target.value.toLowerCase();
+            var rows = document.querySelectorAll('.qunl-baihat-table tbody tr');
+            rows.forEach(function (row) {
+                var text = row.textContent.toLowerCase();
+                row.style.display = text.indexOf(value) > -1 ? '' : 'none';
+            });
+        });
+
+        function editSong(id) {
+            window.location.href = '/Song/Edit/' + id;
+        }
+
+        function deleteSong(id) {
+            songToDelete = id;
+            document.getElementById('deleteConfirmationOverlay').classList.remove('hidden');
+        }
+
+        function closeDeletePopup() {
+            songToDelete = null;
+            document.getElementById('deleteConfirmationOverlay').classList.add('hidden');
+        }
+
+        function confirmDeleteSong() {
+            if (!songToDelete) return;
+
+            fetch('/Home/DeleteSong', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id: songToDelete })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const row = document.querySelector('tr[data-song-id="' + songToDelete + '"]');
+                        if (row) row.remove();
+                        closeDeletePopup();
+                    } else {
+                        alert(data.message || 'Xóa thất bại.');
+                    }
+                })
+                .catch(() => {
+                    alert('Lỗi mạng khi xóa bài hát. Vui lòng thử lại.');
+                });
+        }
+    </script>
+}
