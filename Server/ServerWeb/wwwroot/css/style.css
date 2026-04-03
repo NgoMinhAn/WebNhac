@@ -600,6 +600,11 @@ body {
     background: var(--glass-hover);
 }
 
+.btn-active {
+    background: #fff !important;
+    color: #333 !important;
+}
+
 /* MUSIC CARDS */
 .music-group {
     margin-bottom: 50px;
