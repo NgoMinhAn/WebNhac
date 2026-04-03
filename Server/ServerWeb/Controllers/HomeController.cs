@@ -34,6 +34,13 @@ namespace ServerWeb.Controllers
             return View(songs);
         }
 
+        public IActionResult Library()
+        {
+            ViewData["Title"] = "Thư viện";
+            var songs = _dbContext.Songs.OrderBy(s => s.Id).ToList();
+            return View(songs);
+        }
+
         // 2. Trang Quản lý chính (Admin)
         public IActionResult Admin()
         {
