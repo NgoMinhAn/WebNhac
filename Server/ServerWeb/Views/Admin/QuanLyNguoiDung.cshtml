@@ -4,68 +4,224 @@
     ViewData["Title"] = "Quản lý người dùng";
 }
 
-<div class="song-management-container">
-    <div class="song-header">
-        <h1 class="song-title">Quản lý người dùng</h1>
-        <button class="btn-add-song" onclick="alert('Tính năng đang phát triển')">+ Thêm người dùng</button>
-    </div>
-
-    <div class="song-data-card">
-        <div class="song-search-container">
-            <div class="song-search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="userSearch" placeholder="Tìm kiếm tên hoặc email...">
+<div class="user-management-wrapper">
+    <div class="user-management-container">
+        <div class="user-title">Quản lý người dùng</div>
+        
+        <div class="management-section">
+            <div class="management-bg"></div>
+            <div class="separator"></div>
+            
+            <div class="table-header">
+                <div class="header-col header-username">Tên người dùng</div>
+                <div class="header-col header-role">Vai trò</div>
+                <div class="header-col header-status">Trạng thái</div>
+                <div class="header-col header-actions">Thao tác</div>
             </div>
-        </div>
-
-        <table class="song-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Tên đăng nhập</th>
-                    <th>Email</th>
-                    <th>Số điện thoại</th>
-                    <th>Vai trò</th>
-                    <th>Hành động</th>
-                </tr>
-            </thead>
-            <tbody>
+            
+            <div class="table-body">
                 @if (Model != null)
                 {
                     foreach (var user in Model)
                     {
-                        <tr>
-                            <td>#@user.Id</td>
-                            <td><strong>@user.Username</strong></td>
-                            <td>@user.Email</td>
-                            <td>@(user.PhoneNumber ?? "Chưa cập nhật")</td>
-                            <td>
-                                <span class="badge-role">
-                                    @(user.Role ?? "User")
-                                </span>
-                            </td>
-                            <td>
-                                <div class="song-action-icons">
-                                    <i class="fas fa-edit" style="color: #f1c40f; margin-right: 15px; cursor: pointer;"></i>
-                                    <i class="fas fa-trash" style="color: #ff5e5e; cursor: pointer;"></i>
-                                </div>
-                            </td>
-                        </tr>
+                        <div class="table-row">
+                            <div class="table-col col-username">
+                                <strong>@user.Username</strong>
+                            </div>
+                            <div class="table-col col-role">
+                                <span class="role-badge">@(user.Role ?? "User")</span>
+                            </div>
+                            <div class="table-col col-status">
+                                <span class="status-badge">Hoạt động</span>
+                            </div>
+                            <div class="table-col col-actions">
+                                <i class="fas fa-edit" style="color: #f1c40f; margin-right: 15px; cursor: pointer;"></i>
+                                <i class="fas fa-trash" style="color: #ff5e5e; cursor: pointer;"></i>
+                            </div>
+                        </div>
                     }
                 }
-            </tbody>
-        </table>
+            </div>
+        </div>
     </div>
 </div>
 
 <style>
-    /* Style cho nhãn vai trò cho chuyên nghiệp */
-    .badge-role {
+    .user-management-wrapper {
+        width: 100%;
+        min-height: 100vh;
+        background: linear-gradient(180deg, rgba(163.92, 99.47, 243.24, 0.98) 0%, rgba(0, 0, 0, 0.98) 100%);
+        overflow: hidden;
+        padding: 0;
+        margin: 0;
+        border-radius: 20px;
+    }
+
+    .user-management-container {
+        position: relative;
+        width: 1130px;
+        height: 899px;
+        margin: 0 auto;
+    }
+
+    .user-title {
+        position: absolute;
+        left: 75px;
+        top: 43px;
+        color: white;
+        font-size: 42px;
+        font-family: Inter, sans-serif;
+        font-weight: 600;
+        word-wrap: break-word;
+    }
+
+    .management-section {
+        position: absolute;
+        width: 1071px;
+        height: 715px;
+        left: 44px;
+        top: 120px;
+        overflow: hidden;
+    }
+
+    .management-bg {
+        position: absolute;
+        width: 1070px;
+        height: 719px;
+        left: 1px;
+        top: -4px;
+        background: #4F4F4F;
+        border-radius: 20px;
+        border: 1px solid black;
+    }
+
+    .separator {
+        position: absolute;
+        width: 1069px;
+        height: 0px;
+        left: 2px;
+        top: 74px;
+        border-top: 1px solid white;
+    }
+
+    .table-header {
+        position: absolute;
+        top: 23px;
+        left: 0;
+        width: 100%;
+        display: flex;
+        padding: 0 10px;
+        z-index: 2;
+    }
+
+    .header-col {
+        color: white;
+        font-size: 20px;
+        font-family: Poppins, sans-serif;
+        font-weight: 600;
+        word-wrap: break-word;
+    }
+
+    .header-username {
+        position: absolute;
+        left: 96px;
+    }
+
+    .header-role {
+        position: absolute;
+        left: 449px;
+    }
+
+    .header-status {
+        position: absolute;
+        left: 632px;
+    }
+
+    .header-actions {
+        position: absolute;
+        left: 894px;
+    }
+
+    .table-body {
+        position: absolute;
+        top: 100px;
+        left: 0;
+        width: 100%;
+        height: calc(100% - 100px);
+        overflow-y: auto;
+        z-index: 1;
+    }
+
+    .table-row {
+        display: flex;
+        align-items: center;
+        padding: 20px 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        font-size: 16px;
+        font-family: Poppins, sans-serif;
+    }
+
+    .table-row:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .table-col {
+        position: absolute;
+    }
+
+    .col-username {
+        left: 96px;
+    }
+
+    .col-role {
+        left: 449px;
+    }
+
+    .col-status {
+        left: 632px;
+    }
+
+    .col-actions {
+        left: 894px;
+    }
+
+    .role-badge {
         background: rgba(111, 66, 193, 0.2);
         color: #a29bfe;
         padding: 4px 12px;
         border-radius: 20px;
-        font-size: 12px;
+        font-size: 14px;
         border: 1px solid #6f42c1;
+        display: inline-block;
+    }
+
+    .status-badge {
+        background: rgba(76, 175, 80, 0.2);
+        color: #4CAF50;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 14px;
+        border: 1px solid #4CAF50;
+        display: inline-block;
+    }
+
+    /* Scrollbar styling */
+    .table-body::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .table-body::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+    }
+
+    .table-body::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+    }
+
+    .table-body::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.3);
     }
 </style>
