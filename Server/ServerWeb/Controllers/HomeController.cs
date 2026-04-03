@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace ServerWeb.Controllers
 {
@@ -34,11 +35,119 @@ namespace ServerWeb.Controllers
             return View(songs);
         }
 
+        [Authorize]
         public IActionResult Library()
         {
             ViewData["Title"] = "Thư viện";
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+            {
+                return RedirectToAction("Login", "Auth");
+            }
+            int userId = int.Parse(userIdClaim.Value);
+            var likedPlaylist = _dbContext.Playlists.FirstOrDefault(p => p.UserId == userId && p.Name == "Liked");
+            List<Song> likedSongs = new List<Song>();
+            if (likedPlaylist != null)
+            {
+                likedSongs = _dbContext.PlaylistSongs
+                    .Where(ps => ps.PlaylistId == likedPlaylist.Id)
+                    .Include(ps => ps.Song)
+                    .Select(ps => ps.Song)
+                    .ToList();
+            }
+            ViewBag.LikedSongs = likedSongs;
             var songs = _dbContext.Songs.OrderBy(s => s.Id).ToList();
+            System.Diagnostics.Debug.WriteLine($"Library: Found {songs.Count} songs in database");
+            foreach (var song in songs)
+            {
+                System.Diagnostics.Debug.WriteLine($"Song ID: {song.Id}, Name: {song.Name}");
+            }
             return View(songs);
+        }
+
+        public class ToggleLikeRequest
+        {
+            public int SongId { get; set; }
+        }
+
+        [HttpPost]
+        [Authorize]
+        [IgnoreAntiforgeryToken]
+        public IActionResult ToggleLike([FromBody] ToggleLikeRequest request)
+        {
+            int songId = request?.SongId ?? 0;
+            _logger.LogInformation("ToggleLike called with songId: {SongId}", songId);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) {
+                _logger.LogWarning("User not authenticated");
+                return Json(new { success = false, message = "User not authenticated" });
+            }
+            int userId = int.Parse(userIdClaim.Value);
+            _logger.LogInformation("User ID: {UserId}", userId);
+
+            // Check if song exists
+            _logger.LogInformation("Looking for song with ID: {SongId} (type: {SongIdType})", songId, songId.GetType());
+            
+            // Try multiple ways to find the song
+            var song = _dbContext.Songs.Find(songId);
+            _logger.LogInformation("Song.Find result: {Song}", song?.Name ?? "null");
+            
+            if (song == null) {
+                _logger.LogInformation("Trying FirstOrDefault...");
+                song = _dbContext.Songs.FirstOrDefault(s => s.Id == songId);
+                _logger.LogInformation("FirstOrDefault result: {Song}", song?.Name ?? "null");
+            }
+            
+            if (song == null) {
+                _logger.LogInformation("Trying Where + FirstOrDefault...");
+                song = _dbContext.Songs.Where(s => s.Id == songId).FirstOrDefault();
+                _logger.LogInformation("Where + FirstOrDefault result: {Song}", song?.Name ?? "null");
+            }
+            
+            if (song == null) {
+                _logger.LogInformation("Trying AsNoTracking...");
+                song = _dbContext.Songs.AsNoTracking().FirstOrDefault(s => s.Id == songId);
+                _logger.LogInformation("AsNoTracking result: {Song}", song?.Name ?? "null");
+            }
+            
+            if (song == null) {
+                _logger.LogError("All queries failed for songId: {SongId}", songId);
+                var allSongs = _dbContext.Songs.ToList();
+                _logger.LogInformation("Available songs in database: {Count}", allSongs.Count);
+                foreach (var s in allSongs) {
+                    _logger.LogInformation("  ID: {SongId}, Name: {SongName}", s.Id, s.Name);
+                }
+                return Json(new { success = false, message = $"Song not found. Available songs: {string.Join(", ", allSongs.Select(s => $"{s.Id}"))}" });
+            }
+            _logger.LogInformation("Song found: {SongName}", song.Name);
+
+            var likedPlaylist = _dbContext.Playlists.FirstOrDefault(p => p.UserId == userId && p.Name == "Liked");
+            if (likedPlaylist == null)
+            {
+                System.Diagnostics.Debug.WriteLine("Creating new Liked playlist");
+                likedPlaylist = new Playlist { Name = "Liked", UserId = userId };
+                _dbContext.Playlists.Add(likedPlaylist);
+                _dbContext.SaveChanges();
+            }
+
+            var existing = _dbContext.PlaylistSongs.FirstOrDefault(ps => ps.PlaylistId == likedPlaylist.Id && ps.SongId == songId);
+            if (existing != null)
+            {
+                // Unlike
+                System.Diagnostics.Debug.WriteLine("Unliking song");
+                _dbContext.PlaylistSongs.Remove(existing);
+                _dbContext.SaveChanges();
+                return Json(new { success = true, liked = false, message = "Song unliked" });
+            }
+            else
+            {
+                // Like
+                System.Diagnostics.Debug.WriteLine("Liking song");
+                var playlistSong = new PlaylistSong { PlaylistId = likedPlaylist.Id, SongId = songId };
+                _dbContext.PlaylistSongs.Add(playlistSong);
+                _dbContext.SaveChanges();
+                return Json(new { success = true, liked = true, message = "Song liked" });
+            }
         }
 
         // 2. Trang Quản lý chính (Admin)

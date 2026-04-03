@@ -5,6 +5,8 @@
     var allSongs = Model.ToList();
     var playlistSongs = allSongs.Take(4).ToList();
     var allArtists = allSongs.Select(s => s.Author).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(a => a).ToList();
+    var likedSongs = ((IEnumerable<ServerWeb.Models.Song>)ViewBag.LikedSongs)?.ToList() ?? new List<ServerWeb.Models.Song>();
+    var likedArtists = likedSongs.Select(s => s.Author).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(a => a).ToList();
 }
 
 <div class="content-area" style="min-height: calc(100vh - 100px);">    <div id="popupPlayer" class="popup-player" aria-hidden="true">
@@ -17,7 +19,7 @@
         <div id="timeLeft" class="time-left">0:00</div>
         <div id="timeRight" class="time-right">0:00</div>
         <div class="control-buttons">
-          <button class="btn" id="favoriteBtn" type="button"><i class="fas fa-heart"></i></button>
+          <button class="btn" id="favoriteBtn" type="button"><i class="far fa-heart"></i></button>
           <button class="btn" id="shuffleBtn" type="button"><i class="fas fa-random"></i></button>
           <button class="btn" id="prevBtn" type="button"><i class="fas fa-step-backward"></i></button>
           <button class="btn play-btn" id="playPauseBtn" type="button"><i class="fas fa-play"></i></button>
@@ -64,7 +66,7 @@
             {
                 foreach (var song in playlistSongs)
                 {
-                    <div class="music-card" data-song-id="@song.Id" data-song-name="@song.Name" data-song-author="@song.Author" data-song-album="@song.Album" data-song-genre="@song.Genre" data-file-path="@Url.Content(song.FilePath)" data-cover-path="@Url.Content(song.CoverPath)" onclick="playSongFromCard(this)">
+                    <div class="music-card" data-song-id="@song.Id" data-song-name="@song.Name" data-song-author="@song.Author" data-song-album="@song.Album" data-song-genre="@song.Genre" @if (!string.IsNullOrEmpty(song.FilePath)) { <text>data-file-path="@Url.Content(song.FilePath)"</text> } @if (!string.IsNullOrEmpty(song.CoverPath)) { <text>data-cover-path="@Url.Content(song.CoverPath)"</text> } @if (!string.IsNullOrEmpty(song.FilePath)) { <text>onclick="playSongFromCard(this)"</text> }>
                         <div class="card-thumb" style="background-image: url('@(string.IsNullOrEmpty(song.CoverPath) ? "https://via.placeholder.com/300x180?text=No+Cover" : Url.Content(song.CoverPath))'); background-size: cover; background-position: center;"></div>
                         <div class="card-info">
                             <h3>@song.Name</h3>
@@ -99,8 +101,106 @@
 
 @section Scripts {
 <script>
-    const allSongs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(allSongs.Select(s => new { s.Id, s.Name, s.Author, s.Album, s.Genre, FilePath = Url.Content(s.FilePath), CoverPath = Url.Content(s.CoverPath), Duration = s.Duration.ToString(@"mm\:ss") }).ToList()));
-    const artists = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(allArtists));
+    console.log('Library script loaded');
+    
+    // Simple test to see if script runs
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded');
+        
+        // Try to attach event listener after DOM is loaded
+        const favoriteBtn = document.getElementById('favoriteBtn');
+        console.log('favoriteBtn element:', favoriteBtn);
+        
+        if (favoriteBtn) {
+            favoriteBtn.addEventListener('click', function() {
+                console.log('Like button clicked');
+                
+                if (!window.currentSongId) {
+                    console.warn('No song is currently playing');
+                    return;
+                }
+                
+                console.log('Sending request to toggle like for song:', window.currentSongId);
+                fetch('/Home/ToggleLike', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ songId: window.currentSongId })
+                })
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Response data:', data);
+                    if (data.success) {
+                        console.log('Like toggled successfully, liked:', data.liked);
+                        updateFavoriteIcon(data.liked);
+                        if (data.liked) {
+                            const song = allSongs.find(s => s.Id === window.currentSongId);
+                            if (song) {
+                                window.likedSongs.push(song);
+                                console.log('Added song to liked list');
+                            }
+                        } else {
+                            window.likedSongs = window.likedSongs.filter(s => s.Id !== window.currentSongId);
+                            console.log('Removed song from liked list');
+                        }
+                        likedArtists = [...new Set(window.likedSongs.map(s => s.Author))].sort((a, b) => a.localeCompare(b));
+                        if (currentMode === 'song') {
+                            renderSongCards(window.likedSongs);
+                        } else {
+                            renderArtistCards(likedArtists);
+                        }
+                        console.log('Song ' + (data.liked ? 'liked' : 'unliked') + ' successfully!');
+                    } else {
+                        console.error('Toggle like failed:', data.message || data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error toggling like:', error);
+                    alert('Error toggling like: ' + error.message);
+                });
+            });
+            console.log('Event listener attached to favoriteBtn');
+        } else {
+            console.log('favoriteBtn not found');
+        }
+    });
+    
+    // Global variables
+    window.currentSongId = null;
+    window.likedSongs = []; // Initialize as empty array, will be set later
+    
+    // Initialize data variables
+    let allSongs = [];
+    let artists = [];
+    let likedSongs = [];
+    let likedArtists = [];
+    let playlist = []; // Initialize playlist here
+    
+    // Load data from server
+    try {
+        allSongs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(allSongs.Select(s => new { s.Id, s.Name, s.Author, s.Album, s.Genre, FilePath = !string.IsNullOrEmpty(s.FilePath) ? Url.Content(s.FilePath) : null, CoverPath = !string.IsNullOrEmpty(s.CoverPath) ? Url.Content(s.CoverPath) : null, Duration = s.Duration.ToString(@"mm\:ss") }).ToList()));
+        artists = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(allArtists));
+        likedSongs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(likedSongs.Select(s => new { s.Id, s.Name, s.Author, s.Album, s.Genre, FilePath = !string.IsNullOrEmpty(s.FilePath) ? Url.Content(s.FilePath) : null, CoverPath = !string.IsNullOrEmpty(s.CoverPath) ? Url.Content(s.CoverPath) : null, Duration = s.Duration.ToString(@"mm\:ss") }).ToList()));
+        likedArtists = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(likedArtists));
+        
+        // Update global variable
+        window.likedSongs = likedSongs;
+        
+        // Set playlist after data is loaded
+        playlist = likedSongs || [];
+        
+        console.log('Songs loaded:', allSongs.length);
+        console.log('All songs:', allSongs);
+        console.log('Liked songs:', likedSongs);
+        console.log('First few song IDs:', allSongs.slice(0, 5).map(s => s.Id));
+    } catch (e) {
+        console.error('Error parsing song data:', e);
+    }
 
     const tabSongs = document.getElementById('tabSongs');
     const tabArtists = document.getElementById('tabArtists');
@@ -112,6 +212,8 @@
     const playPauseBtn = document.getElementById('playPauseBtn');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
+    const favoriteBtn = document.getElementById('favoriteBtn');
+    console.log('favoriteBtn element:', favoriteBtn);
     const volumeRange = document.getElementById('volumeRange');
     const volumeIcon = document.getElementById('volumeIcon');
     const durationBar = document.querySelector('.duration-bar');
@@ -130,7 +232,6 @@
     let currentSongId = null;
     let currentSongIndex = -1;
     let currentMode = 'song';
-    let playlist = allSongs || [];
 
     function showPopupPlayer() {
       if (!popupPlayer) return;
@@ -142,6 +243,11 @@
       if (!popupPlayer) return;
       popupPlayer.classList.remove('visible');
       popupPlayer.setAttribute('aria-hidden', 'true');
+    }
+
+    function updateFavoriteIcon(isLiked) {
+      const icon = favoriteBtn?.querySelector('i');
+      if (icon) icon.className = isLiked ? 'fas fa-heart' : 'far fa-heart';
     }
 
     function updatePlayerDisplay(name, author, coverPath, album, genre) {
@@ -176,6 +282,7 @@
       }
       isPlaying = false;
       currentSongId = null;
+      window.currentSongId = null; // Clear global variable
       currentSongIndex = -1;
       updatePlayButton();
       hidePopupPlayer();
@@ -225,6 +332,9 @@
       const existingIndex = playlist.findIndex(x => x.Id === song.Id);
       currentSongIndex = existingIndex >= 0 ? existingIndex : -1;
       currentSongId = song.Id;
+      window.currentSongId = song.Id; // Set global variable
+      const isLiked = window.likedSongs.some(s => s.Id === currentSongId);
+      updateFavoriteIcon(isLiked);
 
       if (currentAudio) {
         if (currentSongId === song.Id) {
@@ -265,8 +375,10 @@
     }
 
     function playSongFromCard(card) {
+      console.log('playSongFromCard called with card:', card);
+      console.log('card.dataset:', card.dataset);
       const song = {
-        Id: card.dataset.songId,
+        Id: parseInt(card.dataset.songId),
         Name: card.dataset.songName,
         Author: card.dataset.songAuthor,
         Album: card.dataset.songAlbum || '',
@@ -274,6 +386,7 @@
         FilePath: card.dataset.filePath,
         CoverPath: card.dataset.coverPath || ''
       };
+      console.log('Extracted song:', song);
       playSong(song);
     }
 
@@ -284,6 +397,7 @@
         return;
       }
       list.forEach(song => {
+        if (!song.FilePath) return;
         const card = document.createElement('div');
         card.className = 'music-card';
         card.dataset.songId = song.Id;
@@ -320,7 +434,7 @@
         const card = document.createElement('div');
         card.className = 'music-card';
         card.onclick = () => {
-          const byArtist = allSongs.filter(x => x.Author.toLowerCase() === artist.toLowerCase());
+          const byArtist = window.likedSongs.filter(x => x.Author.toLowerCase() === artist.toLowerCase());
           renderSongCards(byArtist);
           tabSongs.classList.remove('btn-active');
           tabArtists.classList.add('btn-active');
@@ -328,7 +442,7 @@
 
         const info = document.createElement('div');
         info.className = 'card-info';
-        info.innerHTML = `<h3>${artist}</h3><p>${allSongs.filter(x=>x.Author.toLowerCase()===artist.toLowerCase()).length} bài hát</p>`;
+        info.innerHTML = `<h3>${artist}</h3><p>${window.likedSongs.filter(x=>x.Author.toLowerCase()===artist.toLowerCase()).length} bài hát</p>`;
 
         card.append(info);
         songContainer.append(card);
@@ -338,16 +452,16 @@
     function applySearch() {
       const q = librarySearch.value.trim().toLowerCase();
       if (!q) {
-        if (currentMode === 'song') renderSongCards(allSongs);
-        else renderArtistCards(artists);
+        if (currentMode === 'song') renderSongCards(window.likedSongs);
+        else renderArtistCards(likedArtists);
         return;
       }
 
       if (currentMode === 'song') {
-        const filtered = allSongs.filter(item => item.Name.toLowerCase().includes(q) || item.Author.toLowerCase().includes(q) || item.Album.toLowerCase().includes(q));
+        const filtered = window.likedSongs.filter(item => item.Name.toLowerCase().includes(q) || item.Author.toLowerCase().includes(q) || item.Album.toLowerCase().includes(q));
         renderSongCards(filtered);
       } else {
-        const filtered = artists.filter(item => item.toLowerCase().includes(q));
+        const filtered = likedArtists.filter(item => item.toLowerCase().includes(q));
         renderArtistCards(filtered);
       }
     }
@@ -397,15 +511,12 @@
 
     durationBar?.addEventListener('click', seekToPosition);
 
-    renderSongCards(allSongs);
-</script>
-}
-        tabArtists.style.background = '#fff';
-        tabArtists.style.color = '#333';
-        tabSongs.style.background = 'rgba(255,255,255,0.2)';
-        tabSongs.style.color = '#fff';
-        applySearch();
-    });
+    // Initialize with artists tab active
+    currentMode = 'song';
+    tabSongs.style.background = '#fff';
+    tabSongs.style.color = '#333';
+    tabArtists.style.background = 'rgba(255,255,255,0.2)';
+    tabArtists.style.color = '#fff';
 
     librarySearch.addEventListener('input', applySearch);
 
@@ -413,6 +524,6 @@
         alert('Chức năng tạo playlist đang còn đang phát triển.');
     });
 
-    renderSongCards(allSongs);
+    renderSongCards(window.likedSongs);
 </script>
 }
