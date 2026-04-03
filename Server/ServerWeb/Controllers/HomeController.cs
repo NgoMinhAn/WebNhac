@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace ServerWeb.Controllers
 {
@@ -34,15 +35,12 @@ namespace ServerWeb.Controllers
         }
 
         // 2. Trang Quản lý chính (Admin)
-        // Đường dẫn: /Home/Admin
         public IActionResult Admin()
         {
             return RedirectToAction("QuanLyBaiHat");
         }
 
-        // 3. Quản lý bài hát (Trỏ trực tiếp vào thư mục Views/Admin)
-        // Đường dẫn: /Home/Admin/QuanLyBaiHat
-        // Chỉ những ai có Role là 'Admin' mới được vào các hàm này
+        // 3. Quản lý bài hát (Admin)
         [Authorize(Roles = "Admin")]
         [Route("Home/Admin/QuanLyBaiHat")]
         public IActionResult QuanLyBaiHat()
@@ -51,6 +49,7 @@ namespace ServerWeb.Controllers
             return View("~/Views/Admin/QuanLyBaiHat.cshtml", songs);
         }
 
+        // 4. Quản lý người dùng (Admin)
         [Authorize(Roles = "Admin")]
         [Route("Home/Admin/QuanLyNguoiDung")]
         public IActionResult QuanLyNguoiDung()
@@ -58,8 +57,8 @@ namespace ServerWeb.Controllers
             var users = _dbContext.Users.ToList();
             return View("~/Views/Admin/QuanLyNguoiDung.cshtml", users);
         }
-    
-        // --- CÁC HÀM XỬ LÝ DỮ LIỆU (POST/API) ---
+
+        // --- CÁC HÀM XỬ LÝ DỮ LIỆU BÀI HÁT ---
 
         public class SongIdRequest { public int Id { get; set; } }
 
@@ -70,7 +69,6 @@ namespace ServerWeb.Controllers
             var song = await _dbContext.Songs.FindAsync(request.Id);
             if (song == null) return Json(new { success = false, message = "Bài hát không tồn tại" });
 
-            // Xóa file vật lý
             DeletePhysicalFile(song.FilePath);
             DeletePhysicalFile(song.CoverPath);
 
@@ -103,63 +101,150 @@ namespace ServerWeb.Controllers
         }
 
         [HttpGet]
-        public IActionResult UploadSong()
-        {
-            return View();
-        }
+        public IActionResult UploadSong() => View();
 
         [HttpPost]
-        public async Task<IActionResult> UploadSong(string name, string author, string album, string genre, IFormFile file, IFormFile? cover, string? duration)
+        public async Task<IActionResult> UploadSong(string name, string author, string album, string genre, IFormFile file, IFormFile? coverFile, string? duration)
         {
             bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
 
             if (string.IsNullOrWhiteSpace(name) || file == null)
             {
-                if (isAjax) return Json(new { success = false, message = "Thiếu thông tin." });
+                if (isAjax) return Json(new { success = false, message = "Thiếu thông tin tên bài hát hoặc tệp nhạc." });
+                ModelState.AddModelError("", "Tên bài hát và tệp nhạc là bắt buộc.");
                 return View();
             }
 
-            // Lưu file
-            var fileExtension = Path.GetExtension(file.FileName);
-            var fileName = Guid.NewGuid().ToString() + fileExtension;
-            var musicPath = Path.Combine(_env.WebRootPath, "Music", fileName);
-            using (var stream = new FileStream(musicPath, FileMode.Create)) { await file.CopyToAsync(stream); }
-
-            string? coverPath = null;
-            if (cover != null)
+            try
             {
-                var coverExtension = Path.GetExtension(cover.FileName);
-                var coverName = Guid.NewGuid().ToString() + coverExtension;
-                var coverFullPath = Path.Combine(_env.WebRootPath, "Covers", coverName);
-                using (var stream = new FileStream(coverFullPath, FileMode.Create)) { await cover.CopyToAsync(stream); }
-                coverPath = $"/Covers/{coverName}";
-            }
+                string musicFolder = Path.Combine(_env.WebRootPath, "Music");
+                string coverFolder = Path.Combine(_env.WebRootPath, "images");
 
-            var song = new Song
-            {
-                Name = name,
-                Author = author,
-                Album = album,
-                Genre = genre,
-                FilePath = $"/Music/{fileName}",
-                CoverPath = coverPath,
-                Duration = TimeSpan.Zero
-            };
+                if (!Directory.Exists(musicFolder)) Directory.CreateDirectory(musicFolder);
+                if (!Directory.Exists(coverFolder)) Directory.CreateDirectory(coverFolder);
 
-            if (!string.IsNullOrEmpty(duration))
-            {
-                if (TimeSpan.TryParseExact(duration.Trim(), new[] { "m\\:ss", "mm\\:ss", "h\\:mm\\:ss", "hh\\:mm\\:ss" }, null, out var parsedDuration))
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+                var musicPath = Path.Combine(musicFolder, fileName);
+                using (var stream = new FileStream(musicPath, FileMode.Create)) { await file.CopyToAsync(stream); }
+
+                string? coverPath = null;
+                if (coverFile != null && coverFile.Length > 0)
+                {
+                    var coverName = Guid.NewGuid().ToString() + Path.GetExtension(coverFile.FileName);
+                    var coverFullPath = Path.Combine(coverFolder, coverName);
+                    using (var stream = new FileStream(coverFullPath, FileMode.Create)) { await coverFile.CopyToAsync(stream); }
+                    coverPath = $"/images/{coverName}";
+                }
+
+                var song = new Song
+                {
+                    Name = name,
+                    Author = author,
+                    Album = album,
+                    Genre = genre,
+                    FilePath = $"/Music/{fileName}",
+                    CoverPath = coverPath,
+                    Duration = TimeSpan.Zero
+                };
+
+                if (!string.IsNullOrEmpty(duration) && TimeSpan.TryParseExact(duration.Trim(), new[] { "m\\:ss", "mm\\:ss", "h\\:mm\\:ss", "hh\\:mm\\:ss" }, null, out var parsedDuration))
                 {
                     song.Duration = parsedDuration;
                 }
+
+                _dbContext.Songs.Add(song);
+                await _dbContext.SaveChangesAsync();
+
+                if (isAjax) return Json(new { success = true, song });
+                return RedirectToAction("QuanLyBaiHat");
+            }
+            catch (Exception ex)
+            {
+                if (isAjax) return Json(new { success = false, message = "Lỗi: " + ex.Message });
+                return View();
+            }
+        }
+
+        // --- CÁC HÀM XỬ LÝ HỒ SƠ NGƯỜI DÙNG (PROFILE) ---
+
+        [Authorize]
+        public async Task<IActionResult> Profile()
+        {
+            var userName = User.Identity?.Name;
+            if (string.IsNullOrEmpty(userName)) return RedirectToAction("Index");
+
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Username == userName);
+            if (user == null) return NotFound();
+
+            return View(user);
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> EditProfile()
+        {
+            var userName = User.Identity?.Name;
+            if (string.IsNullOrEmpty(userName)) return RedirectToAction("Index");
+
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Username == userName);
+            if (user == null) return NotFound();
+
+            return View(user);
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditProfile(User model, IFormFile? avatarFile)
+        {
+            // 1. Tìm user trong DB bằng ID truyền từ Form ẩn
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == model.Id);
+
+            if (user == null)
+            {
+                // Nếu vào đây là do <input type="hidden" asp-for="Id" /> của bạn bị sai
+                return NotFound("Không tìm thấy User với ID: " + model.Id);
             }
 
-            _dbContext.Songs.Add(song);
-            await _dbContext.SaveChangesAsync();
+            // 2. Gán dữ liệu mới (Chỉ gán nếu có dữ liệu để tránh ghi đè NULL)
+            user.Username = model.Username ?? user.Username;
+            user.Bio = model.Bio;
 
-            if (isAjax) return Json(new { success = true, song });
+            // Nếu Form có gửi Email lên thì cập nhật, không thì giữ nguyên bản cũ trong DB
+            if (!string.IsNullOrEmpty(model.Email))
+            {
+                user.Email = model.Email;
+            }
 
-            return RedirectToAction("QuanLyBaiHat");
+            // 3. Xử lý Ảnh
+            if (avatarFile != null && avatarFile.Length > 0)
+            {
+                string folder = Path.Combine(_env.WebRootPath, "images");
+                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+
+                string fileName = Guid.NewGuid().ToString() + Path.GetExtension(avatarFile.FileName);
+                string filePath = Path.Combine(folder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await avatarFile.CopyToAsync(stream);
+                }
+                user.AvatarUrl = "/images/" + fileName;
+            }
+
+            // 4. Lưu - Bỏ qua ModelState check tạm thời để test xem có lưu được không
+            try
+            {
+                _dbContext.Users.Update(user);
+                await _dbContext.SaveChangesAsync();
+                return RedirectToAction("Profile"); // Lưu xong quay về trang cá nhân
+            }
+            catch (Exception ex)
+            {
+                // Nếu có lỗi SQL, nó sẽ hiện ra ở đây
+                ModelState.AddModelError("", "Lỗi lưu DB: " + ex.InnerException?.Message ?? ex.Message);
+                return View(model);
+            }
         }
 
         private void DeletePhysicalFile(string? path)

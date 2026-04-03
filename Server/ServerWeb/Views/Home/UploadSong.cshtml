@@ -1,3 +1,5 @@
+@model ServerWeb.Models.Song
+
 @{
     ViewData["Title"] = "Upload Song";
 }
@@ -12,19 +14,22 @@
         color: #f8f9ff;
         padding: 30px 15px;
     }
+
     .upload-card {
         width: min(96vw, 520px);
         padding: 28px;
         background: rgba(28, 31, 55, 0.95);
         border: 1px solid #4c5a8e;
         border-radius: 14px;
-        box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
     }
+
     .upload-card h2 {
         margin-top: 0;
         color: #f6da91;
         margin-bottom: 16px;
     }
+
     .upload-card label {
         display: block;
         margin-bottom: 5px;
@@ -32,7 +37,9 @@
         font-size: 0.95rem;
         color: #cdd2e6;
     }
-    .upload-card input[type=text], .upload-card input[type=file] {
+
+    .upload-card input[type=text],
+    .upload-card input[type=file] {
         width: 100%;
         padding: 10px 11px;
         margin-bottom: 12px;
@@ -42,6 +49,7 @@
         color: #eef1ff;
         font-size: 0.95rem;
     }
+
     .upload-card button[type=submit] {
         width: 100%;
         padding: 12px;
@@ -51,27 +59,40 @@
         background: linear-gradient(100deg, #f9b149, #ffda80);
         color: #1a1c2d;
         cursor: pointer;
+        transition: all 0.3s;
     }
+
     .upload-card button[type=submit]:hover {
-        filter: brightness(1.05);
+        filter: brightness(1.1);
+        transform: translateY(-1px);
     }
+
     .status-message {
         margin-bottom: 12px;
         padding: 10px;
         border-radius: 8px;
         font-weight: 600;
     }
+
     .back-link {
         display: inline-block;
         margin-top: 10px;
         color: #d6e6ff;
         text-decoration: underline;
     }
+
+    #imagePreview {
+        text-align: center;
+        background: #161930;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px dashed #4c5a8e;
+    }
 </style>
 
 <div class="upload-page">
     <div class="upload-card">
-        <h2>Thêm bài hát</h2>
+        <h2>Thêm bài hát mới</h2>
 
         @if (TempData["SuccessMessage"] != null)
         {
@@ -80,35 +101,68 @@
 
         @if (!ViewData.ModelState.IsValid)
         {
-            <div class="status-message" style="background:#5e191d; color:#ffd5dc;">Có lỗi trong dữ liệu nhập vào.</div>
+            <div class="status-message" style="background:#5e191d; color:#ffd5dc;">Vui lòng kiểm tra lại thông tin nhập vào.
+            </div>
         }
 
         <form asp-action="UploadSong" method="post" enctype="multipart/form-data">
             <label for="name">Tên bài hát</label>
-            <input type="text" id="name" name="name" required />
+            <input type="text" id="name" name="Name" placeholder="VD: Alone" required />
 
             <label for="author">Nghệ sĩ</label>
-            <input type="text" id="author" name="author" required />
+            <input type="text" id="author" name="Author" placeholder="VD: Alan Walker" required />
 
             <label for="album">Album</label>
-            <input type="text" id="album" name="album" required />
+            <input type="text" id="album" name="Album" placeholder="VD: Different World" />
 
             <label for="genre">Thể loại</label>
-            <input type="text" id="genre" name="genre" required />
+            <input type="text" id="genre" name="Genre" placeholder="VD: Electronic" />
 
-            <label for="file">Tệp nhạc</label>
+            <label for="coverFile">Ảnh bìa (Cover Image)</label>
+            <input type="file" id="coverFile" name="coverFile" class="form-control" accept="image/*" />
+
+            <div id="imagePreview" style="margin-bottom: 12px; display: none;">
+                <p style="font-size: 0.8rem; color: #cdd2e6; margin-bottom: 5px;">Xem trước ảnh bìa:</p>
+                <img id="preview" src="#" alt="Preview"
+                    style="max-width: 150px; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #f6da91;" />
+            </div>
+
+            <label for="file">Tệp nhạc (MP3, WAV...)</label>
             <input type="file" id="file" name="file" accept="audio/*" required />
-            <input type="hidden" id="duration" name="duration" value="" />
-            <div id="durationDisplay" style="margin-bottom: 12px; color: #b8d1ff; font-size: .9rem;">Thời lượng chưa được xác định</div>
 
-            <button type="submit">Lưu bài hát</button>
+            <input type="hidden" id="duration" name="Duration" value="" />
+            <div id="durationDisplay" style="margin-bottom: 15px; color: #f6da91; font-weight: bold; font-size: .9rem;">
+                <i class="fas fa-clock"></i> Thời lượng: Chưa xác định
+            </div>
+
+            <button type="submit">Lưu vào thư viện</button>
         </form>
 
-        <a class="back-link" href="/Home/Admin">Quay lại Admin</a>
+        <a class="back-link" href="/Home/Admin">← Quay lại Admin</a>
     </div>
 </div>
 
 <script>
+    // XỬ LÝ ẢNH BÌA (PREVIEW)
+    const coverInput = document.getElementById('coverFile');
+    const previewImg = document.getElementById('preview');
+    const previewDiv = document.getElementById('imagePreview');
+
+    coverInput.addEventListener('change', function () {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                previewImg.src = e.target.result;
+                previewDiv.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+        } else {
+            previewDiv.style.display = 'none';
+        }
+    });
+
+    // XỬ LÝ THỜI LƯỢNG NHẠC
     const fileInput = document.getElementById('file');
     const durationInput = document.getElementById('duration');
     const durationDisplay = document.getElementById('durationDisplay');
@@ -139,8 +193,9 @@
             const seconds = totalSeconds % 60;
             const formatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
+            // Lưu vào hidden input và hiển thị
             durationInput.value = formatted;
-            durationDisplay.textContent = 'Thời lượng: ' + formatted;
+            durationDisplay.innerHTML = '<i class="fas fa-check-circle"></i> Thời lượng: ' + formatted;
         };
 
         audio.onerror = function () {

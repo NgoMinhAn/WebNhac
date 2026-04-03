@@ -1,0 +1,57 @@
+@model ServerWeb.Models.User
+
+<div class="upload-page">
+    <div class="upload-card">
+        <h2 style="color: #f6da91;">Chỉnh sửa hồ sơ</h2>
+
+        <form asp-action="EditProfile" method="post" enctype="multipart/form-data">
+            <input type="hidden" asp-for="Id" />
+            @* Quan trọng: Phải giữ lại Email để không bị lỗi SQL NULL khi lưu *@
+            <input type="hidden" asp-for="Email" />
+
+            <div style="text-align: center; margin-bottom: 20px;">
+                <label>Ảnh đại diện hiện tại</label>
+                <div class="avatar-preview">
+                    @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                    {
+                        <img id="imgPreview" src="@Model.AvatarUrl"
+                            style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid #f6da91;" />
+                    }
+                    else
+                    {
+                        <img id="imgPreview" src="/images/default-avatar.png"
+                            style="width: 100px; height: 100px; border-radius: 50%;" />
+                    }
+                </div>
+                @* Thêm id="fileInput" để xử lý JavaScript *@
+                <input type="file" id="fileInput" name="avatarFile" accept="image/*"
+                    style="margin-top: 10px; color: white;" />
+            </div>
+
+            <label>Tên người dùng</label>
+            <input type="text" asp-for="Username" class="form-control"
+                style="width:100%; margin-bottom:15px; background:#1f243f; color:white; border:1px solid #4c5a8e;" />
+
+            <label>Giới thiệu (Bio)</label>
+            <textarea asp-for="Bio" class="form-control"
+                style="width:100%; margin-bottom:20px; background:#1f243f; color:white; border:1px solid #4c5a8e;"></textarea>
+
+            <button type="submit" class="btn-continue"
+                style="width:100%; padding:12px; background:#f6da91; color:#1a1c2d; font-weight:bold; border:none; border-radius:5px; cursor:pointer;">
+                Lưu hồ sơ
+            </button>
+        </form>
+    </div>
+</div>
+
+@* 2. Thêm JavaScript để ảnh hiện lên ngay lập tức khi chọn file *@
+@section Scripts {
+    <script>
+        document.getElementById('fileInput').onchange = evt => {
+            const [file] = document.getElementById('fileInput').files;
+            if (file) {
+                document.getElementById('imgPreview').src = URL.createObjectURL(file);
+            }
+        }
+    </script>
+}

@@ -1,0 +1,101 @@
+@model ServerWeb.Models.Song
+
+@{
+    ViewData["Title"] = "Chỉnh sửa bài hát";
+}
+
+<style>
+    .upload-page {
+        display: flex;
+        min-height: 80vh;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(135deg, #1b1c2f, #2f344d);
+        color: #f8f9ff;
+        padding: 30px 15px;
+    }
+
+    .upload-card {
+        width: min(96vw, 520px);
+        padding: 28px;
+        background: rgba(28, 31, 55, 0.95);
+        border: 1px solid #4c5a8e;
+        border-radius: 14px;
+    }
+
+    .upload-card h2 {
+        color: #f6da91;
+        margin-bottom: 16px;
+    }
+
+    .upload-card label {
+        display: block;
+        margin-top: 10px;
+        color: #cdd2e6;
+    }
+
+    .upload-card input[type=text],
+    .upload-card input[type=file] {
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+        border-radius: 8px;
+        border: 1px solid #5e6ba5;
+        background: #1f243f;
+        color: white;
+    }
+
+    .btn-save {
+        width: 100%;
+        padding: 12px;
+        margin-top: 20px;
+        background: linear-gradient(100deg, #f9b149, #ffda80);
+        border: none;
+        border-radius: 9px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .current-info {
+        font-size: 0.85rem;
+        color: #f6da91;
+        margin-bottom: 5px;
+    }
+</style>
+
+<div class="upload-page">
+    <div class="upload-card">
+        <h2>Chỉnh sửa bài hát</h2>
+
+        <form asp-action="Edit" method="post" enctype="multipart/form-data">
+            <input type="hidden" asp-for="Id" />
+
+            <label>Tên bài hát</label>
+            <input type="text" asp-for="Name" required />
+
+            <label>Nghệ sĩ</label>
+            <input type="text" asp-for="Author" required />
+
+            <label>Album</label>
+            <input type="text" asp-for="Album" />
+
+            <label>Thể loại</label>
+            <input type="text" asp-for="Genre" />
+
+            <label>Thay đổi ảnh bìa (Để trống nếu giữ nguyên)</label>
+            @if (!string.IsNullOrEmpty(Model.CoverPath))
+            {
+                <div class="current-info">Ảnh hiện tại: @Model.CoverPath</div>
+            }
+            <input type="file" name="coverFile" accept="image/*" />
+
+            <label>Thay đổi tệp nhạc (Để trống nếu giữ nguyên)</label>
+            <div class="current-info">File hiện tại: @Model.FilePath</div>
+            <input type="file" name="musicFile" accept="audio/*" />
+
+            <button type="submit" class="btn-save">Cập nhật bài hát</button>
+        </form>
+
+        <a style="color:white; display:block; margin-top:15px;" href="/Home/Admin"> Quay lại Admin</a>
+    </div>
+</div>
