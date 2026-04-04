@@ -176,6 +176,7 @@
                 Author: decodeHtmlEntities(card.dataset.songAuthor || card.dataset.author || ''),
                 Album: decodeHtmlEntities(card.dataset.songAlbum || card.dataset.album || ''),
                 Genre: decodeHtmlEntities(card.dataset.songGenre || card.dataset.genre || ''),
+                Duration: card.dataset.songDuration || card.dataset.duration || '',
                 FilePath: card.dataset.filePath,
                 CoverPath: card.dataset.coverPath || ''
             };

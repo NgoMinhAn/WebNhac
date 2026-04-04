@@ -38,7 +38,7 @@
                             <td>@item.Author</td>
                             <td>@item.Album</td>
                             <td>@item.Genre</td>
-                            <td>@item.Duration.ToString(@"mm\:ss")</td>
+                            <td>@(item.Duration.TotalHours >= 1 ? item.Duration.ToString(@"h\:mm\:ss") : item.Duration.ToString(@"mm\:ss"))</td>
                             <td class="action-icons">
                                 <i class="fas fa-edit" onclick="editSong(@item.Id)"></i>
                                 <i class="fas fa-trash" onclick="deleteSong(@item.Id)"></i>

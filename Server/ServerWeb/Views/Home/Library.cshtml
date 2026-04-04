@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Thư viện";
+    string FormatDuration(TimeSpan duration) => duration.TotalHours >= 1 ? duration.ToString(@"h\:mm\:ss") : duration.ToString(@"mm\:ss");
     var allSongs = Model.ToList();
     var playlistSongs = allSongs.Take(4).ToList();
     var allArtists = allSongs.Select(s => s.Author).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(a => a).ToList();
@@ -30,11 +31,11 @@
             {
                 foreach (var song in playlistSongs)
                 {
-                    <div class="music-card" data-song-id="@song.Id" data-song-name="@song.Name" data-song-author="@song.Author" data-song-album="@song.Album" data-song-genre="@song.Genre" @if (!string.IsNullOrEmpty(song.FilePath)) { <text>data-file-path="@Url.Content(song.FilePath)"</text> } @if (!string.IsNullOrEmpty(song.CoverPath)) { <text>data-cover-path="@Url.Content(song.CoverPath)"</text> } @if (!string.IsNullOrEmpty(song.FilePath)) { <text>onclick="playSongFromCard(this)"</text> }>
+                    <div class="music-card" data-song-id="@song.Id" data-song-name="@song.Name" data-song-author="@song.Author" data-song-album="@song.Album" data-song-genre="@song.Genre" data-song-duration="@FormatDuration(song.Duration)" @if (!string.IsNullOrEmpty(song.FilePath)) { <text>data-file-path="@Url.Content(song.FilePath)"</text> } @if (!string.IsNullOrEmpty(song.CoverPath)) { <text>data-cover-path="@Url.Content(song.CoverPath)"</text> } @if (!string.IsNullOrEmpty(song.FilePath)) { <text>onclick="playSongFromCard(this)"</text> }>
                         <div class="card-thumb" style="background-image: url('@(string.IsNullOrEmpty(song.CoverPath) ? "https://via.placeholder.com/300x180?text=No+Cover" : Url.Content(song.CoverPath))'); background-size: cover; background-position: center;"></div>
                         <div class="card-info">
                             <h3>@song.Name</h3>
-                            <p>@song.Author</p>
+                            <p>@song.Author • @FormatDuration(song.Duration)</p>
                         </div>
                     </div>
                 }
@@ -66,9 +67,9 @@
 @section Scripts {
 <script>
     window.currentSongId = null;
-    window.likedSongs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(likedSongs.Select(s => new { s.Id, s.Name, s.Author, s.Album, s.Genre, FilePath = !string.IsNullOrEmpty(s.FilePath) ? Url.Content(s.FilePath) : null, CoverPath = !string.IsNullOrEmpty(s.CoverPath) ? Url.Content(s.CoverPath) : null, Duration = s.Duration.ToString(@"mm\:ss") }).ToList()));
+    window.likedSongs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(likedSongs.Select(s => new { s.Id, s.Name, s.Author, s.Album, s.Genre, FilePath = !string.IsNullOrEmpty(s.FilePath) ? Url.Content(s.FilePath) : null, CoverPath = !string.IsNullOrEmpty(s.CoverPath) ? Url.Content(s.CoverPath) : null, Duration = s.Duration.TotalHours >= 1 ? s.Duration.ToString(@"h\:mm\:ss") : s.Duration.ToString(@"mm\:ss") }).ToList()));
 
-    const allSongs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(allSongs.Select(s => new { s.Id, s.Name, s.Author, s.Album, s.Genre, FilePath = !string.IsNullOrEmpty(s.FilePath) ? Url.Content(s.FilePath) : null, CoverPath = !string.IsNullOrEmpty(s.CoverPath) ? Url.Content(s.CoverPath) : null, Duration = s.Duration.ToString(@"mm\:ss") }).ToList()));
+    const allSongs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(allSongs.Select(s => new { s.Id, s.Name, s.Author, s.Album, s.Genre, FilePath = !string.IsNullOrEmpty(s.FilePath) ? Url.Content(s.FilePath) : null, CoverPath = !string.IsNullOrEmpty(s.CoverPath) ? Url.Content(s.CoverPath) : null, Duration = s.Duration.TotalHours >= 1 ? s.Duration.ToString(@"h\:mm\:ss") : s.Duration.ToString(@"mm\:ss") }).ToList()));
     let likedArtists = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(likedArtists));
 
     let currentMode = 'song';
@@ -144,10 +145,11 @@
             cover.style.backgroundImage = `url('${song.CoverPath || 'https://via.placeholder.com/300x180?text=no+cover'}')`;
             cover.style.backgroundSize = 'cover';
             cover.style.backgroundPosition = 'center';
+            card.dataset.songDuration = song.Duration || '';
 
             const info = document.createElement('div');
             info.className = 'card-info';
-            info.innerHTML = `<h3>${song.Name}</h3><p>${song.Author}</p>`;
+            info.innerHTML = `<h3>${song.Name}</h3><p>${song.Author} • ${song.Duration || '00:00'}</p>`;
 
             card.append(cover, info);
             songContainer.append(card);

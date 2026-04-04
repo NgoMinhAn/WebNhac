@@ -4,6 +4,8 @@
   ViewData["Title"] = "Trang chủ";
   var allSongs = Model.ToList();
 
+  string FormatDuration(TimeSpan duration) => duration.TotalHours >= 1 ? duration.ToString(@"h\:mm\:ss") : duration.ToString(@"mm\:ss");
+
   var firstSectionSongs = allSongs.Take(4).ToList();
   var secondSectionSongs = allSongs.Skip(4).Take(4).ToList();
 }
@@ -51,17 +53,17 @@
     <div class="card-grid">
       @foreach (var song in firstSectionSongs)
       {
-        <div class="music-card" data-song-id="@song.Id" data-song-name="@Html.Encode(song.Name)" data-song-author="@Html.Encode(song.Author)" data-song-album="@Html.Encode(song.Album)" data-song-genre="@Html.Encode(song.Genre)" data-file-path="@Url.Content(song.FilePath)" data-cover-path="@Url.Content(song.CoverPath)" onclick="playSongFromCard(this)">
+        <div class="music-card" data-song-id="@song.Id" data-song-name="@Html.Encode(song.Name)" data-song-author="@Html.Encode(song.Author)" data-song-album="@Html.Encode(song.Album)" data-song-genre="@Html.Encode(song.Genre)" data-song-duration="@FormatDuration(song.Duration)" data-file-path="@Url.Content(song.FilePath)" data-cover-path="@Url.Content(song.CoverPath)" onclick="playSongFromCard(this)">
           @if (!string.IsNullOrEmpty(song.CoverPath))
           {
             <div class="card-thumb" style="background-image: url('@song.CoverPath'); background-size: cover; background-position: center;">
-              <span>@song.Duration.ToString(@"mm\:ss")</span>
+              <span>@FormatDuration(song.Duration)</span>
             </div>
           }
           else
           {
             <div class="card-thumb">
-              <span>@song.Duration.ToString(@"mm\:ss")</span>
+              <span>@FormatDuration(song.Duration)</span>
             </div>
           }
           <div class="card-info">
@@ -81,17 +83,17 @@
     <div class="card-grid">
       @foreach (var song in secondSectionSongs)
       {
-        <div class="music-card" data-song-id="@song.Id" data-song-name="@Html.Encode(song.Name)" data-song-author="@Html.Encode(song.Author)" data-song-album="@Html.Encode(song.Album)" data-song-genre="@Html.Encode(song.Genre)" data-file-path="@Url.Content(song.FilePath)" data-cover-path="@Url.Content(song.CoverPath)" onclick="playSongFromCard(this)">
+        <div class="music-card" data-song-id="@song.Id" data-song-name="@Html.Encode(song.Name)" data-song-author="@Html.Encode(song.Author)" data-song-album="@Html.Encode(song.Album)" data-song-genre="@Html.Encode(song.Genre)" data-song-duration="@FormatDuration(song.Duration)" data-file-path="@Url.Content(song.FilePath)" data-cover-path="@Url.Content(song.CoverPath)" onclick="playSongFromCard(this)">
           @if (!string.IsNullOrEmpty(song.CoverPath))
           {
             <div class="card-thumb" style="background-image: url('@song.CoverPath'); background-size: cover; background-position: center;">
-              <span>@song.Duration.ToString(@"mm\:ss")</span>
+              <span>@FormatDuration(song.Duration)</span>
             </div>
           }
           else
           {
             <div class="card-thumb">
-              <span>@song.Duration.ToString(@"mm\:ss")</span>
+              <span>@FormatDuration(song.Duration)</span>
             </div>
           }
           <div class="card-info">
@@ -116,6 +118,7 @@
         Author = s.Author,
         Album = s.Album,
         Genre = s.Genre,
+        Duration = FormatDuration(s.Duration),
         FilePath = Url.Content(s.FilePath),
         CoverPath = Url.Content(s.CoverPath)
     }).ToList()));

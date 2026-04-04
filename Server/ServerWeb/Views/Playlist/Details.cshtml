@@ -76,7 +76,7 @@
                     foreach (var ps in Model.PlaylistSongs)
                     {
                         @* CẬP NHẬT: Thêm class song-row và data-song-id để JavaScript nhận diện *@
-                        <tr class="song-row" data-song-id="@ps.SongId" style="cursor: pointer;">
+                        <tr class="song-row" data-song-id="@ps.SongId" style="cursor: pointer;" onclick="playPlaylistSong(this)">
                             <td>@(index++)</td>
                             <td>
                                 <div class="song-title-cell">
@@ -85,7 +85,7 @@
                             </td>
                             <td>@ps.Song?.Author</td>
                             <td>@ps.Song?.Album</td>
-                            <td style="text-align: right; padding-right: 20px;">@ps.Song?.Duration</td>
+                            <td style="text-align: right; padding-right: 20px;">@(ps.Song == null ? string.Empty : (ps.Song.Duration.TotalHours >= 1 ? ps.Song.Duration.ToString(@"h\:mm\:ss") : ps.Song.Duration.ToString(@"mm\:ss")))</td>
                         </tr>
                     }
                 }
@@ -105,9 +105,9 @@
 <style>
     .playlist-page {
         padding: 30px;
-        background: linear-gradient(to bottom, #535353, #121212);
+        background: linear-gradient(180deg, #2d125c 0%, #09030e 60%, #050106 100%);
         min-height: 100vh;
-        color: white;
+        color: #f7f3ff;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
@@ -121,13 +121,14 @@
     .playlist-cover {
         width: 232px;
         height: 232px;
-        background: #282828;
+        background: linear-gradient(135deg, #4423a6, #8a4dff);
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 80px;
-        box-shadow: 0 4px 60px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 24px 80px rgba(90, 54, 160, 0.35);
         overflow: hidden;
+        border-radius: 28px;
     }
 
     .playlist-cover img {
@@ -142,12 +143,12 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.6);
+        background: rgba(29, 7, 63, 0.75);
         display: none;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        color: white;
+        color: #f7f3ff;
         font-size: 24px;
     }
 
@@ -155,17 +156,39 @@
         display: flex;
     }
 
+    .playlist-info .sub-title {
+        display: inline-block;
+        font-size: 14px;
+        letter-spacing: 0.14em;
+        color: #d8c9ff;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+    }
+
     .playlist-info h1 {
         font-size: 72px;
         margin: 8px 0;
         font-weight: 900;
+        color: #ffffff;
         outline: none;
         border-bottom: 2px solid transparent;
-        transition: border 0.3s;
+        transition: border 0.3s ease, color 0.3s ease;
     }
 
     .playlist-info h1:focus {
-        border-bottom: 2px solid white;
+        border-bottom: 2px solid #b085ff;
+    }
+
+    .playlist-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #c9beff;
+        font-size: 14px;
+    }
+
+    .playlist-meta .separator {
+        color: #6e5db8;
     }
 
     .action-bar {
@@ -175,42 +198,50 @@
     }
 
     .btn-play-all {
-        background-color: #1ed760;
+        background: linear-gradient(135deg, #8f50ff, #5a13e8);
         border: none;
         border-radius: 50px;
-        color: black;
+        color: white;
         padding: 14px 32px;
-        font-weight: bold;
+        font-weight: 700;
         cursor: pointer;
-        transition: transform 0.2s;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 16px 30px rgba(92, 41, 189, 0.28);
     }
 
     .btn-play-all:hover {
-        transform: scale(1.05);
+        transform: scale(1.04);
+        box-shadow: 0 20px 40px rgba(92, 41, 189, 0.35);
     }
 
     .btn-add-song {
-        background: transparent;
-        border: 1px solid #727272;
-        color: white;
+        background: rgba(130, 78, 241, 0.08);
+        border: 1px solid rgba(143, 80, 255, 0.5);
+        color: #f7f3ff;
         padding: 8px 16px;
         border-radius: 50px;
         cursor: pointer;
+        transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .btn-add-song:hover {
+        background: rgba(143, 80, 255, 0.18);
+        border-color: #8f50ff;
     }
 
     .search-input-box {
         display: flex;
         align-items: center;
-        background: #3e3e3e;
+        background: rgba(88, 40, 172, 0.18);
         padding: 8px 15px;
-        border-radius: 4px;
+        border-radius: 8px;
         width: 300px;
     }
 
     .search-input-box input {
         background: transparent;
         border: none;
-        color: white;
+        color: #f7f3ff;
         margin-left: 10px;
         width: 100%;
         outline: none;
@@ -220,30 +251,41 @@
         width: 100%;
         border-collapse: collapse;
         margin-top: 20px;
+        background: rgba(58, 24, 126, 0.15);
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
     }
 
     .song-table th {
         text-align: left;
-        color: #b3b3b3;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 10px;
+        color: #c8b9ff;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 16px 12px;
         font-size: 12px;
         text-transform: uppercase;
+        letter-spacing: 0.08em;
+        background: rgba(41, 14, 102, 0.35);
     }
 
     .song-table tr:hover {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(155, 85, 255, 0.12);
     }
 
     .song-table td {
-        padding: 12px 10px;
-        color: #b3b3b3;
+        padding: 14px 12px;
+        color: #dcd3ff;
         font-size: 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .song-table tr:last-child td {
+        border-bottom: none;
     }
 
     .song-title-cell span {
-        color: white;
-        font-weight: 500;
+        color: #ffffff;
+        font-weight: 600;
     }
 </style>
 
@@ -364,11 +406,33 @@
                 return;
             }
 
-            // Gọi hàm mở trình phát (Player)
             if (typeof openPlayer === "function") {
                 openPlayer(playlistIds[0], playlistIds);
 
-                // Hiển thị khung Music Player (Hình 2)
+                const playerModal = document.getElementById('musicPlayerModal');
+                if (playerModal) playerModal.style.display = 'flex';
+            } else {
+                alert("Hệ thống chưa nạp trình phát nhạc. Hãy kiểm tra lại file Layout hoặc site.js!");
+            }
+        }
+
+        function playPlaylistSong(row) {
+            const songId = row?.getAttribute('data-song-id');
+            if (!songId) return;
+
+            const songRows = document.querySelectorAll('.song-row');
+            const playlistIds = [];
+
+            songRows.forEach(item => {
+                const id = item.getAttribute('data-song-id');
+                if (id) {
+                    playlistIds.push(parseInt(id));
+                }
+            });
+
+            if (typeof openPlayer === "function") {
+                openPlayer(parseInt(songId), playlistIds);
+
                 const playerModal = document.getElementById('musicPlayerModal');
                 if (playerModal) playerModal.style.display = 'flex';
             } else {
