@@ -1,0 +1,109 @@
+@model IEnumerable<ServerWeb.Models.Playlist>
+
+<div class="container">
+    <div class="header-flex">
+        <h2>Thư viện của bạn</h2>
+        <button class="btn-create" onclick="location.href='/Playlist/Create'">+ Tạo mới</button>
+    </div>
+
+    <div class="playlist-grid">
+        @foreach (var item in Model)
+        {
+            <div class="playlist-card" id="playlist-@item.Id">
+                <div class="card-img" onclick="location.href='/Playlist/Details/@item.Id'">
+                    <img src="@(item.ImageUrl ?? "/images/default-playlist.png")" />
+                    <button class="play-overlay"><i class="fas fa-play"></i></button>
+                </div>
+
+                <div class="card-content">
+                    <div class="card-title-row">
+                        <h3 onclick="location.href='/Playlist/Details/@item.Id'">@item.Name</h3>
+                        <button class="btn-menu" onclick="showMenu(event, @item.Id)">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </div>
+                    <p>Playlist • @User.Identity.Name</p>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<div id="contextMenu" class="custom-context-menu">
+    <ul>
+        <li onclick="actionEdit()"><i class="fas fa-edit"></i> Sửa thông tin</li>
+        <li onclick="actionDelete()" class="delete-opt"><i class="fas fa-trash"></i> Xóa Playlist</li>
+        <li onclick="actionPrivacy()"><i class="fas fa-lock"></i> Đặt thành riêng tư</li>
+    </ul>
+</div>
+
+<style>
+    /* CSS cho Menu ẩn */
+    .custom-context-menu {
+        display: none;
+        position: absolute;
+        background: #282828;
+        border-radius: 4px;
+        min-width: 180px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+    }
+
+    .custom-context-menu ul {
+        list-style: none;
+        padding: 5px 0;
+        margin: 0;
+    }
+
+    .custom-context-menu li {
+        padding: 12px 15px;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .custom-context-menu li:hover {
+        background: #3e3e3e;
+    }
+
+    .delete-opt {
+        color: #ff4d4d !important;
+    }
+
+    /* Layout Grid */
+    .playlist-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+    }
+
+    .playlist-card {
+        background: #181818;
+        padding: 15px;
+        border-radius: 10px;
+        transition: 0.3s;
+    }
+
+    .playlist-card:hover {
+        background: #282828;
+    }
+
+    .card-img img {
+        width: 100%;
+        border-radius: 5px;
+        aspect-ratio: 1;
+        object-fit: cover;
+    }
+
+    .card-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+</style>
+@section Scripts {
+    <script src="~/js/playlist-actions.js" asp-append-version="true"></script>
+}

@@ -87,5 +87,22 @@ namespace ServerWeb.Controllers
             }
             return View(song);
         }
+        [HttpGet]
+        public async Task<IActionResult> GetSongDetails(int id)
+        {
+            var song = await _dbContext.Songs.FindAsync(id);
+            if (song == null) return NotFound();
+
+            return Json(new
+            {
+                name = song.Name,
+                author = song.Author,
+                album = song.Album,
+                genre = song.Genre,
+                duration = song.Duration.ToString(@"mm\:ss"), // Chuyển TimeSpan thành chuỗi
+                imageUrl = song.CoverPath ?? "/images/default-disk.png",
+                audioUrl = song.FilePath // Đây là đường dẫn đến file .mp3
+            });
+        }
     }
 }
