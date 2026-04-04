@@ -35,6 +35,34 @@
                 <span class="separator">•</span>
                 <span id="songCountDisplay">@(Model?.PlaylistSongs?.Count ?? 0) bài hát</span>
             </div>
+
+            @* SỬA MÔ TẢ: Click để sửa *@
+            <div class="playlist-description">
+                <p id="playlistDescription" contenteditable="true" spellcheck="false" class="description-text">
+                    @if (string.IsNullOrEmpty(Model?.Description))
+                    {
+                        <span style="color: #666;">Nhấn để thêm mô tả...</span>
+                    }
+                    else
+                    {
+                        @Model.Description
+                    }
+                </p>
+            </div>
+
+            @* TRẠNG THÁI RIÊNG TƯ *@
+            <div class="playlist-status">
+                <button class="btn-privacy" onclick="togglePrivacy()">
+                    @if (Model?.IsPrivate == true)
+                    {
+                        <i class="fas fa-lock"></i> <span>Riêng tư</span>
+                    }
+                    else
+                    {
+                        <i class="fas fa-globe"></i> <span>Công khai</span>
+                    }
+                </button>
+            </div>
         </div>
     </div>
 
@@ -75,8 +103,8 @@
                     var index = 1;
                     foreach (var ps in Model.PlaylistSongs)
                     {
-                        @* CẬP NHẬT: Thêm class song-row và data-song-id để JavaScript nhận diện *@
-                        <tr class="song-row" data-song-id="@ps.SongId" style="cursor: pointer;">
+                        @* CẬP NHẬT: Thêm class song-row và data-song-id để JavaScript nhận diện, thêm nút xóa *@
+                        <tr class="song-row" data-song-id="@ps.SongId" data-playlist-song-id="@ps.Id" style="cursor: pointer;">
                             <td>@(index++)</td>
                             <td>
                                 <div class="song-title-cell">
@@ -85,7 +113,12 @@
                             </td>
                             <td>@ps.Song?.Author</td>
                             <td>@ps.Song?.Album</td>
-                            <td style="text-align: right; padding-right: 20px;">@ps.Song?.Duration</td>
+                            <td style="text-align: right; padding-right: 20px;">
+                                <span>@ps.Song?.Duration</span>
+                                <button type="button" class="btn-remove-song" onclick="removeSongFromPlaylist(@ps.SongId, event)" title="Xóa bài hát khỏi playlist">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </td>
                         </tr>
                     }
                 }
@@ -168,6 +201,49 @@
         border-bottom: 2px solid white;
     }
 
+    .playlist-description {
+        margin-top: 15px;
+    }
+
+    .description-text {
+        font-size: 14px;
+        color: #b3b3b3;
+        outline: none;
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid transparent;
+        transition: all 0.3s;
+        max-width: 400px;
+    }
+
+    .description-text:focus {
+        border: 1px solid #1ed760;
+        background: rgba(30, 215, 96, 0.1);
+        color: white;
+    }
+
+    .playlist-status {
+        margin-top: 12px;
+    }
+
+    .btn-privacy {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid #727272;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 50px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-privacy:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
     .action-bar {
         display: flex;
         gap: 20px;
@@ -245,6 +321,27 @@
         color: white;
         font-weight: 500;
     }
+
+    .btn-remove-song {
+        background: transparent;
+        border: none;
+        color: #b3b3b3;
+        cursor: pointer;
+        padding: 4px 8px;
+        margin-left: 10px;
+        font-size: 16px;
+        transition: color 0.2s;
+        display: none;
+    }
+
+    .song-row:hover .btn-remove-song {
+        display: inline;
+        color: #ff4d4d;
+    }
+
+    .btn-remove-song:hover {
+        color: #ff1744;
+    }
 </style>
 
 @section Scripts {
@@ -268,6 +365,26 @@
                     body: JSON.stringify({ id: playlistId, name: newName })
                 });
             } catch (err) { console.error("Lỗi cập nhật tên:", err); }
+        });
+
+        // 1b. Cập nhật mô tả Playlist
+        document.getElementById('playlistDescription').addEventListener('blur', async function () {
+            const newDescription = this.innerText.trim();
+            const isPlaceholder = this.querySelector('span');
+            
+            // Nếu là placeholder text, xóa nó
+            if (isPlaceholder) {
+                isPlaceholder.remove();
+                this.innerText = newDescription || '';
+            }
+
+            try {
+                await fetch('/Playlist/UpdateDescription', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: playlistId, description: newDescription })
+                });
+            } catch (err) { console.error("Lỗi cập nhật mô tả:", err); }
         });
 
         // 2. Upload ảnh bìa
@@ -373,6 +490,74 @@
                 if (playerModal) playerModal.style.display = 'flex';
             } else {
                 alert("Hệ thống chưa nạp trình phát nhạc. Hãy kiểm tra lại file Layout hoặc site.js!");
+            }
+        }
+
+        // 6. Xóa bài hát khỏi Playlist
+        async function removeSongFromPlaylist(songId, event) {
+            event.stopPropagation();
+            
+            if (!confirm("Bạn chắc chắn muốn xóa bài hát này khỏi playlist?")) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/Playlist/RemoveSong?playlistId=${playlistId}&songId=${songId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    // Xóa hàng từ bảng
+                    const row = event.target.closest('.song-row');
+                    row.remove();
+                    
+                    // Cập nhật số lượng bài hát
+                    const songCount = document.querySelectorAll('.song-row').length;
+                    document.getElementById('songCountDisplay').innerText = songCount + ' bài hát';
+                    
+                    // Nếu không còn bài hát nào, hiển thị thông báo
+                    if (songCount === 0) {
+                        location.reload();
+                    }
+                } else {
+                    alert("Lỗi khi xóa bài hát!");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Có lỗi xảy ra!");
+            }
+        }
+
+        // 7. Toggle trạng thái Riêng tư/Công khai
+        async function togglePrivacy() {
+            try {
+                const response = await fetch(`/Playlist/TogglePrivacy?id=${playlistId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    // Cập nhật giao diện nút
+                    const btn = document.querySelector('.btn-privacy');
+                    const icon = btn.querySelector('i');
+                    const text = btn.querySelector('span');
+                    
+                    if (icon.classList.contains('fa-lock')) {
+                        icon.classList.remove('fa-lock');
+                        icon.classList.add('fa-globe');
+                        text.textContent = 'Công khai';
+                    } else {
+                        icon.classList.remove('fa-globe');
+                        icon.classList.add('fa-lock');
+                        text.textContent = 'Riêng tư';
+                    }
+                } else {
+                    alert("Lỗi khi cập nhật trạng thái!");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Có lỗi xảy ra!");
             }
         }
     </script>
