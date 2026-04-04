@@ -10,6 +10,169 @@
     <link rel="stylesheet" href="~/css/style.css" asp-append-version="true" />
 
     @await RenderSectionAsync("Styles", required: false)
+
+    <style>
+        /* CSS CHO MUSIC PLAYER */
+        .player-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            backdrop-filter: blur(5px);
+        }
+
+        .player-container {
+            background: linear-gradient(135deg, #1e0533 0%, #110d25 100%);
+            width: 90%;
+            max-width: 850px;
+            border-radius: 20px;
+            padding: 40px;
+            position: relative;
+            color: white;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .close-player {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            font-size: 28px;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.5);
+            transition: 0.3s;
+        }
+
+        .close-player:hover {
+            color: white;
+        }
+
+        .player-content {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .song-art {
+            width: 280px;
+            height: 280px;
+            border-radius: 15px;
+            object-fit: cover;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .song-details {
+            flex: 1;
+        }
+
+        .song-details h2 {
+            font-size: 36px;
+            margin: 10px 0;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .song-details p {
+            color: #b3b3b3;
+            margin: 8px 0;
+            font-size: 16px;
+        }
+
+        .song-details strong {
+            color: #1ed760;
+        }
+
+        .player-controls {
+            margin-top: 35px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 25px;
+            border-radius: 15px;
+        }
+
+        .progress-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background: #1ed760;
+            border-radius: 10px;
+            transition: width 0.1s linear;
+        }
+
+        .control-btns {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 35px;
+        }
+
+        .btn-main {
+            font-size: 50px;
+            cursor: pointer;
+            color: #1ed760;
+            transition: 0.2s;
+        }
+
+        .btn-main:hover {
+            transform: scale(1.1);
+            color: #1fdf64;
+        }
+
+        .sub-btn {
+            cursor: pointer;
+            opacity: 0.6;
+            font-size: 22px;
+            transition: 0.3s;
+        }
+
+        .sub-btn:hover {
+            opacity: 1;
+            color: #1ed760;
+        }
+
+        .auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            z-index: 10001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .auth-card {
+            background: #282828;
+            padding: 40px;
+            border-radius: 12px;
+            width: 400px;
+            position: relative;
+            color: white;
+        }
+    </style>
 </head>
 
 <body>
@@ -19,15 +182,15 @@
                 <i class="fas fa-music"></i>
                 <span>Music</span>
             </div>
-
             <ul class="nav-links">
-                <li class="active"><a href="/"><i class="fas fa-home"></i> Trang chủ</a></li>
+                <li class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active" : "")">
+                    <a href="/"><i class="fas fa-home"></i> Trang chủ</a>
+                </li>
                 <li><a href="/Home/Library"><i class="fas fa-book-open"></i> Thư viện</a></li>
                 <li><a href="#"><i class="fas fa-compass"></i> Khám phá</a></li>
-                <li><a href="#"><i class="fas fa-list"></i> Danh sách phát</a></li>
+                <li><a href="/Playlist/Index"><i class="fas fa-list"></i> Danh sách phát</a></li>
             </ul>
-
-            <button class="btn-create-playlist">
+            <button class="btn-create-playlist" onclick="location.href='/Playlist/Create'">
                 <i class="fas fa-plus"></i> Tạo playlist mới
             </button>
         </aside>
@@ -35,29 +198,25 @@
         <div class="right-section">
             <nav class="top-navbar">
                 <div class="nav-breadcrumb">Trang chủ</div>
-
                 <div class="search-container">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
                         <input type="text" placeholder="Tìm kiếm nội dung">
                     </div>
                 </div>
-
                 <div class="auth-buttons">
                     @if (User.Identity != null && User.Identity.IsAuthenticated)
                     {
                         <div class="user-info" style="display: flex; align-items: center; gap: 15px;">
                             <a href="/Home/Profile"
-                                style="text-decoration: none; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                style="text-decoration: none; display: flex; align-items: center; gap: 8px;">
                                 <span style="color: white; font-weight: 600;">
                                     <i class="fas fa-user-circle"></i> @User.Identity.Name
                                 </span>
                             </a>
-
-                            <a href="/Auth/Logout" class="btn-logout"
-                                style="color: #ff4d4d; text-decoration: none; font-size: 14px; font-weight: 700;">
-                                Đăng xuất
-                            </a>
+                            <a href="/Auth/Logout"
+                                style="color: #ff4d4d; text-decoration: none; font-size: 14px; font-weight: 700;">Đăng
+                                xuất</a>
                         </div>
                     }
                     else
@@ -74,120 +233,177 @@
         </div>
     </div>
 
+    <div id="musicPlayerModal" class="player-overlay">
+        <div class="player-container">
+            <span class="close-player" onclick="closePlayer()">&times;</span>
+            <div class="player-content">
+                <img id="p-img" src="/images/default-disk.png" class="song-art">
+                <div class="song-details">
+                    <p style="text-transform: uppercase; letter-spacing: 2px; font-size: 12px; color: #1ed760;">Đang
+                        phát bài hát</p>
+                    <h2 id="p-title">Tên bài hát</h2>
+                    <p><strong>Nghệ sĩ:</strong> <span id="p-author">...</span></p>
+                    <p><strong>Album:</strong> <span id="p-album">...</span></p>
+                    <p><strong>Thể loại:</strong> <span id="p-genre">...</span></p>
+                </div>
+            </div>
+
+            <div class="player-controls">
+                <div class="progress-container">
+                    <span id="p-current">0:00</span>
+                    <div class="progress-bar" id="p-bar-container" onclick="seekAudio(event)">
+                        <div id="p-fill" class="progress-fill"></div>
+                    </div>
+                    <span id="p-duration">0:00</span>
+                </div>
+                <div class="control-btns">
+                    <i class="fas fa-random sub-btn" title="Phát ngẫu nhiên"></i>
+                    <i class="fas fa-step-backward sub-btn" title="Bài trước"></i>
+                    <i class="fas fa-play-circle btn-main" id="p-play-btn" onclick="togglePlay()"></i>
+                    <i class="fas fa-step-forward sub-btn" title="Bài tiếp theo"></i>
+                    <i class="fas fa-redo sub-btn" title="Lặp lại"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="main-audio"></audio>
+
     <div id="authModal" class="auth-overlay" onclick="closeAuth(event)">
         <div class="auth-card" onclick="event.stopPropagation()">
-            <span class="close-x" onclick="closeAuth(null)">&times;</span>
-            <div id="authContent">
-            </div>
+            <span class="close-player" style="top:10px; right:15px" onclick="closeAuth(null)">&times;</span>
+            <div id="authContent"></div>
         </div>
     </div>
 
     @await RenderSectionAsync("Scripts", required: false)
 
     <script>
-        // Hàm mở Modal và đổ nội dung HTML tương ứng
+        // Lấy thẻ audio ngay khi script chạy (thẻ audio lúc này đã tồn tại ở trên)
+        const audio = document.getElementById('main-audio');
+        let isPlaying = false;
+
+        function openPlayer(songId) {
+            const modal = document.getElementById('musicPlayerModal');
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            fetch(`/Song/GetSongDetails/${songId}`)
+                .then(res => res.json())
+                .then(song => {
+                    // 1. Cập nhật giao diện
+                    document.getElementById('p-title').innerText = song.name;
+                    document.getElementById('p-author').innerText = song.author;
+                    document.getElementById('p-album').innerText = song.album || 'Single';
+                    document.getElementById('p-genre').innerText = song.genre || 'Âm nhạc';
+                    document.getElementById('p-duration').innerText = song.duration;
+                    if (song.imageUrl) document.getElementById('p-img').src = song.imageUrl;
+
+                    // 2. Xử lý âm thanh
+                    if (song.audioUrl) {
+                        audio.src = song.audioUrl;
+                        audio.play()
+                            .then(() => {
+                                isPlaying = true;
+                                updatePlayBtn();
+                            })
+                            .catch(err => console.error("Lỗi tự động phát:", err));
+                    }
+                })
+                .catch(err => console.error("Lỗi lấy dữ liệu bài hát:", err));
+        }
+
+        // Cập nhật thanh tiến trình và thời gian
+        audio.ontimeupdate = () => {
+            if (audio.duration) {
+                const progress = (audio.currentTime / audio.duration) * 100;
+                document.getElementById('p-fill').style.width = progress + "%";
+                document.getElementById('p-current').innerText = formatTime(audio.currentTime);
+            }
+        };
+
+        // Hàm tua nhạc khi click vào thanh progress
+        function seekAudio(e) {
+            const bar = document.getElementById('p-bar-container');
+            const clickX = e.offsetX;
+            const width = bar.clientWidth;
+            if (audio.duration) {
+                audio.currentTime = (clickX / width) * audio.duration;
+            }
+        }
+
+        function formatTime(seconds) {
+            let min = Math.floor(seconds / 60);
+            let sec = Math.floor(seconds % 60);
+            return min + ":" + (sec < 10 ? "0" + sec : sec);
+        }
+
+        function togglePlay() {
+            if (audio.src) {
+                if (audio.paused) {
+                    audio.play();
+                    isPlaying = true;
+                } else {
+                    audio.pause();
+                    isPlaying = false;
+                }
+                updatePlayBtn();
+            }
+        }
+
+        function updatePlayBtn() {
+            const btn = document.getElementById('p-play-btn');
+            btn.className = isPlaying ? "fas fa-pause-circle btn-main" : "fas fa-play-circle btn-main";
+        }
+
+        function closePlayer() {
+            document.getElementById('musicPlayerModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // --- LOGIC AUTH ---
         function openAuth(type) {
             const modal = document.getElementById('authModal');
             const content = document.getElementById('authContent');
             modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-
             if (type === 'login') {
                 content.innerHTML = `
-                    <h2 class="auth-title">Chào mừng đến với âm nhạc</h2>
-                    <div class="auth-subtitle">Đăng nhập để tiếp tục</div>
+                    <h2 style="text-align:center; margin-bottom:20px">Đăng nhập</h2>
                     <form onsubmit="handleAuthSubmit(event, 'login')" action="/Auth/Login" method="post">
-                        <div class="auth-field">
-                            <label>E-mail hoặc tên người dùng</label>
-                            <input type="text" name="Email" placeholder="Nhập email hoặc tên người dùng" required>
+                        <div style="margin-bottom:15px">
+                            <label style="display:block;margin-bottom:5px">Email/Username</label>
+                            <input type="text" name="Email" style="width:100%;padding:10px;border-radius:5px;border:none" required>
                         </div>
-                        <div class="auth-field">
-                            <label>Mật khẩu</label>
-                            <input type="password" name="Password" placeholder="Nhập mật khẩu" required>
+                        <div style="margin-bottom:20px">
+                            <label style="display:block;margin-bottom:5px">Mật khẩu</label>
+                            <input type="password" name="Password" style="width:100%;padding:10px;border-radius:5px;border:none" required>
                         </div>
-                        <button type="submit" class="btn-continue">Đăng nhập</button>
-                    </form>
-                    <div class="auth-or">Hoặc</div>
-                    <button class="btn-social btn-phone"><i class="fas fa-mobile-alt"></i> Đăng nhập bằng số điện thoại</button>
-                    <button class="btn-social btn-fb"><i class="fab fa-facebook"></i> Đăng nhập bằng Facebook</button>
-                    <p class="auth-footer">Bạn chưa có tài khoản? <a href="javascript:openAuth('register')">Đăng ký ngay</a></p>
-                `;
+                        <button type="submit" style="width:100%;padding:12px;background:#1ed760;border:none;border-radius:25px;font-weight:700;cursor:pointer">Đăng nhập</button>
+                    </form>`;
             } else {
-                content.innerHTML = `
-                    <h2 class="auth-title">Đăng ký để bắt đầu thưởng thức âm nhạc</h2>
-                    <form onsubmit="handleAuthSubmit(event, 'register')" action="/Auth/Register" method="post">
-                        <div class="auth-field">
-                            <label>Địa chỉ e-mail</label>
-                            <input type="email" name="Email" placeholder="vd: name@domain.com" required>
-                        </div>
-                        <div class="auth-field">
-                            <label>Tên đăng nhập</label>
-                            <input type="text" name="Username" placeholder="Tên hiển thị của bạn" required>
-                        </div>
-                        <div class="auth-field">
-                            <label>Mật khẩu</label>
-                            <input type="password" name="Password" id="regPassword" placeholder="Nhập mật khẩu" required>
-                        </div>
-                        <div class="auth-field">
-                            <label>Xác nhận mật khẩu</label>
-                            <input type="password" name="ConfirmPassword" id="regConfirm" placeholder="Nhập lại mật khẩu" required>
-                        </div>
-                        <button type="submit" class="btn-continue">Đăng ký</button>
-                    </form>
-                    <div class="auth-or">Hoặc</div>
-                    <button class="btn-social btn-phone" style="background:#b2fcf0; color:#004d40;"><i class="fas fa-mobile-alt"></i> Đăng ký bằng số điện thoại</button>
-                    <button class="btn-social btn-fb" style="background:#8cd4ff; color:#003354;"><i class="fab fa-facebook"></i> Đăng ký bằng Facebook</button>
-                    <p class="auth-footer">Bạn đã có tài khoản? <a href="javascript:openAuth('login')">Đăng nhập</a></p>
-                `;
+                content.innerHTML = `<h2 style="text-align:center">Đăng ký</h2><p style="text-align:center">Tính năng đang cập nhật...</p>`;
             }
         }
 
-        // Hàm xử lý gửi form qua AJAX để đọc RedirectUrl
-        function handleAuthSubmit(e, type) {
-            e.preventDefault();
-            const form = e.target;
-
-            // Kiểm tra mật khẩu khớp nhau khi đăng ký
-            if (type === 'register') {
-                const pass = document.getElementById('regPassword').value;
-                const confirm = document.getElementById('regConfirm').value;
-                if (pass !== confirm) {
-                    alert("Mật khẩu xác nhận không khớp!");
-                    return;
-                }
-            }
-
-            const formData = new FormData(form);
-
-            fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest' // Báo cho Controller biết đây là AJAX
-                }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Nếu thành công, chuyển hướng trang theo yêu cầu
-                        window.location.href = data.redirectUrl || '/';
-                    } else {
-                        // Nếu lỗi, hiển thị thông báo
-                        alert(data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Đã có lỗi xảy ra, vui lòng thử lại.');
-                });
-        }
-
-        // Hàm đóng Modal
         function closeAuth(e) {
             if (!e || e.target.id === 'authModal') {
                 document.getElementById('authModal').style.display = 'none';
-                document.body.style.overflow = 'auto';
             }
+        }
+
+        function handleAuthSubmit(e, type) {
+            e.preventDefault();
+            const form = e.target;
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) window.location.href = data.redirectUrl || '/';
+                    else alert(data.message);
+                });
         }
     </script>
 </body>

@@ -20,5 +20,6 @@ namespace ServerWeb.Models
         public string? Role { get; set; }
         public string? AvatarUrl { get; set; }
         public string? Bio { get; set; }
+        public virtual ICollection<Playlist>? Playlists { get; set; }
     }
 }

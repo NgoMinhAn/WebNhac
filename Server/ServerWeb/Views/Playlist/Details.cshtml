@@ -1,0 +1,379 @@
+@model ServerWeb.Models.Playlist
+
+@{
+    ViewData["Title"] = Model?.Name;
+}
+
+<div class="playlist-page">
+    <div class="playlist-header">
+        @* PHẦN ẢNH BÌA: Click để thay đổi *@
+        <div class="playlist-cover" onclick="document.getElementById('fileInput').click()"
+            style="cursor: pointer; position: relative;">
+            @if (string.IsNullOrEmpty(Model?.ImageUrl))
+            {
+                <i class="fas fa-music" id="coverIcon"></i>
+                <img id="playlistImg" src="" style="display:none; width: 100%; height: 100%; object-fit: cover;" />
+            }
+            else
+            {
+                <img id="playlistImg" src="@Model.ImageUrl" alt="Cover" />
+            }
+            <div class="upload-overlay">
+                <i class="fas fa-pen"></i>
+                <span style="font-size: 14px; margin-top: 5px;">Chọn ảnh</span>
+            </div>
+            <input type="file" id="fileInput" style="display: none;" accept="image/*" onchange="uploadImage(event)" />
+        </div>
+
+        <div class="playlist-info">
+            <span class="sub-title">DANH SÁCH PHÁT</span>
+            @* SỬA TÊN: Click trực tiếp vào chữ để sửa *@
+            <h1 id="playlistTitle" contenteditable="true" spellcheck="false">@Model?.Name</h1>
+
+            <div class="playlist-meta">
+                <span class="user-name">@User.Identity?.Name</span>
+                <span class="separator">•</span>
+                <span id="songCountDisplay">@(Model?.PlaylistSongs?.Count ?? 0) bài hát</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="playlist-body">
+        <div class="action-bar">
+            <button class="btn-play-all" onclick="playAllSongs()">
+                <i class="fas fa-play"></i> PHÁT TẤT CẢ
+            </button>
+            <button class="btn-add-song" onclick="toggleSearch()">
+                <i class="fas fa-plus"></i> THÊM BÀI HÁT
+            </button>
+        </div>
+
+        @* PHẦN TÌM KIẾM BÀI HÁT *@
+        <div id="searchSection" style="display:none;" class="search-section">
+            <hr class="section-divider" />
+            <div class="search-input-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="songSearch" placeholder="Tìm kiếm bài hát để thêm vào danh sách..."
+                    oninput="searchSongs(this.value)">
+            </div>
+            <div id="searchResults"></div>
+        </div>
+
+        <table class="song-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px">#</th>
+                    <th>TIÊU ĐỀ</th>
+                    <th>NGHỆ SĨ</th>
+                    <th>ALBUM</th>
+                    <th style="text-align: right; padding-right: 20px;"><i class="far fa-clock"></i></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model?.PlaylistSongs != null && Model.PlaylistSongs.Any())
+                {
+                    var index = 1;
+                    foreach (var ps in Model.PlaylistSongs)
+                    {
+                        @* CẬP NHẬT: Thêm class song-row và data-song-id để JavaScript nhận diện *@
+                        <tr class="song-row" data-song-id="@ps.SongId" style="cursor: pointer;">
+                            <td>@(index++)</td>
+                            <td>
+                                <div class="song-title-cell">
+                                    <span>@ps.Song?.Name</span>
+                                </div>
+                            </td>
+                            <td>@ps.Song?.Author</td>
+                            <td>@ps.Song?.Album</td>
+                            <td style="text-align: right; padding-right: 20px;">@ps.Song?.Duration</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" style="text-align:center; padding: 40px; color: #b3b3b3;">
+                            Danh sách trống. Hãy thêm bài hát bên dưới!
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .playlist-page {
+        padding: 30px;
+        background: linear-gradient(to bottom, #535353, #121212);
+        min-height: 100vh;
+        color: white;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .playlist-header {
+        display: flex;
+        gap: 24px;
+        align-items: flex-end;
+        padding-bottom: 30px;
+    }
+
+    .playlist-cover {
+        width: 232px;
+        height: 232px;
+        background: #282828;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 80px;
+        box-shadow: 0 4px 60px rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+    }
+
+    .playlist-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .upload-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 24px;
+    }
+
+    .playlist-cover:hover .upload-overlay {
+        display: flex;
+    }
+
+    .playlist-info h1 {
+        font-size: 72px;
+        margin: 8px 0;
+        font-weight: 900;
+        outline: none;
+        border-bottom: 2px solid transparent;
+        transition: border 0.3s;
+    }
+
+    .playlist-info h1:focus {
+        border-bottom: 2px solid white;
+    }
+
+    .action-bar {
+        display: flex;
+        gap: 20px;
+        padding: 20px 0;
+    }
+
+    .btn-play-all {
+        background-color: #1ed760;
+        border: none;
+        border-radius: 50px;
+        color: black;
+        padding: 14px 32px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .btn-play-all:hover {
+        transform: scale(1.05);
+    }
+
+    .btn-add-song {
+        background: transparent;
+        border: 1px solid #727272;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 50px;
+        cursor: pointer;
+    }
+
+    .search-input-box {
+        display: flex;
+        align-items: center;
+        background: #3e3e3e;
+        padding: 8px 15px;
+        border-radius: 4px;
+        width: 300px;
+    }
+
+    .search-input-box input {
+        background: transparent;
+        border: none;
+        color: white;
+        margin-left: 10px;
+        width: 100%;
+        outline: none;
+    }
+
+    .song-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    .song-table th {
+        text-align: left;
+        color: #b3b3b3;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 10px;
+        font-size: 12px;
+        text-transform: uppercase;
+    }
+
+    .song-table tr:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .song-table td {
+        padding: 12px 10px;
+        color: #b3b3b3;
+        font-size: 14px;
+    }
+
+    .song-title-cell span {
+        color: white;
+        font-weight: 500;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        const playlistId = @Model.Id;
+
+        function toggleSearch() {
+            const section = document.getElementById('searchSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 1. Cập nhật tên Playlist
+        document.getElementById('playlistTitle').addEventListener('blur', async function () {
+            const newName = this.innerText.trim();
+            if (!newName) return;
+
+            try {
+                await fetch('/Playlist/UpdateName', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: playlistId, name: newName })
+                });
+            } catch (err) { console.error("Lỗi cập nhật tên:", err); }
+        });
+
+        // 2. Upload ảnh bìa
+        async function uploadImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('id', playlistId);
+            formData.append('image', file);
+
+            try {
+                const response = await fetch('/Playlist/UpdateImage', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const imgTag = document.getElementById('playlistImg');
+                    const iconTag = document.getElementById('coverIcon');
+
+                    if (iconTag) iconTag.style.display = 'none';
+                    imgTag.src = data.newUrl;
+                    imgTag.style.display = 'block';
+                }
+            } catch (err) { alert("Lỗi khi upload ảnh bìa!"); }
+        }
+
+        // 3. Tìm kiếm bài hát
+        async function searchSongs(query) {
+            const resultsDiv = document.getElementById('searchResults');
+            if (query.length < 2) { resultsDiv.innerHTML = ''; return; }
+
+            try {
+                const response = await fetch(`/Playlist/SearchSongs?query=${encodeURIComponent(query)}`);
+                const songs = await response.json();
+
+                let html = '<div style="background: #282828; border-radius: 4px; padding: 10px; margin-top: 10px; max-width: 500px;">';
+                if (songs.length === 0) {
+                    html += '<p style="color: #b3b3b3; font-size: 14px; margin:0;">Không tìm thấy kết quả.</p>';
+                } else {
+                    songs.forEach(song => {
+                        html += `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #3e3e3e;">
+                                    <div>
+                                        <div style="font-weight: bold; color: white;">${song.name}</div>
+                                        <div style="font-size: 12px; color: #b3b3b3;">${song.author}</div>
+                                    </div>
+                                    <button onclick="addToList(${song.id})" 
+                                            style="background: white; border: none; color: black; border-radius: 20px; padding: 5px 15px; cursor: pointer; font-weight:bold; font-size:12px;">
+                                        Thêm
+                                    </button>
+                                </div>`;
+                    });
+                }
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+            } catch (err) { console.error(err); }
+        }
+
+        // 4. Thêm bài hát vào danh sách
+        async function addToList(songId) {
+            try {
+                const response = await fetch('/Playlist/AddSong', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ playlistId: playlistId, songId: songId })
+                });
+
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    const err = await response.json();
+                    alert(err.message || "Không thể thêm bài hát.");
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        // 5. Phát tất cả bài hát
+        function playAllSongs() {
+            const songRows = document.querySelectorAll('.song-row');
+            const playlistIds = [];
+
+            songRows.forEach(row => {
+                const id = row.getAttribute('data-song-id');
+                if (id) {
+                    playlistIds.push(parseInt(id));
+                }
+            });
+
+            if (playlistIds.length === 0) {
+                alert("Playlist này chưa có bài hát nào!");
+                return;
+            }
+
+            // Gọi hàm mở trình phát (Player)
+            if (typeof openPlayer === "function") {
+                openPlayer(playlistIds[0], playlistIds);
+
+                // Hiển thị khung Music Player (Hình 2)
+                const playerModal = document.getElementById('musicPlayerModal');
+                if (playerModal) playerModal.style.display = 'flex';
+            } else {
+                alert("Hệ thống chưa nạp trình phát nhạc. Hãy kiểm tra lại file Layout hoặc site.js!");
+            }
+        }
+    </script>
+}
