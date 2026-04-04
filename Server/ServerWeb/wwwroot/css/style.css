@@ -485,16 +485,12 @@ body {
     width: 100%;
     height: 100%;
     background: #393641;
+    background-size: cover;
+    background-position: center;
 }
 
 .popup-player .cover-art .cover-icon {
-    position: absolute;
-    width: 152px;
-    height: 139px;
-    left: 105px;
-    top: 95px;
-    border: 2px solid rgba(255,255,255,0.75);
-    box-sizing: border-box;
+    display: none;
 }
 
 .popup-player .close-player {

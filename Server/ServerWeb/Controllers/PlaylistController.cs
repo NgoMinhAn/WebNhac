@@ -48,6 +48,12 @@ namespace ServerWeb.Controllers
                 .FirstOrDefault(p => p.Id == id);
 
             if (playlist == null) return NotFound();
+
+            playlist.PlaylistSongs = playlist.PlaylistSongs
+                .GroupBy(ps => ps.SongId)
+                .Select(g => g.First())
+                .ToList();
+
             return View(playlist);
         }
         // 1. Tìm kiếm bài hát
