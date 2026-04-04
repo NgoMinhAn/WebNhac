@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Collections.Generic;
 
 namespace ServerWeb.Controllers
 {
@@ -32,6 +33,13 @@ namespace ServerWeb.Controllers
         public IActionResult Index()
         {
             var songs = _dbContext.Songs.OrderBy(s => s.Id).ToList();
+            return View(songs);
+        }
+
+        // --- Action Discovery mới thêm vào ---
+        public IActionResult Discovery()
+        {
+            var songs = _dbContext.Songs.OrderByDescending(s => s.Id).ToList();
             return View(songs);
         }
 
@@ -78,7 +86,8 @@ namespace ServerWeb.Controllers
             int songId = request?.SongId ?? 0;
             _logger.LogInformation("ToggleLike called with songId: {SongId}", songId);
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null) {
+            if (userIdClaim == null)
+            {
                 _logger.LogWarning("User not authenticated");
                 return Json(new { success = false, message = "User not authenticated" });
             }
@@ -87,34 +96,39 @@ namespace ServerWeb.Controllers
 
             // Check if song exists
             _logger.LogInformation("Looking for song with ID: {SongId} (type: {SongIdType})", songId, songId.GetType());
-            
+
             // Try multiple ways to find the song
             var song = _dbContext.Songs.Find(songId);
             _logger.LogInformation("Song.Find result: {Song}", song?.Name ?? "null");
-            
-            if (song == null) {
+
+            if (song == null)
+            {
                 _logger.LogInformation("Trying FirstOrDefault...");
                 song = _dbContext.Songs.FirstOrDefault(s => s.Id == songId);
                 _logger.LogInformation("FirstOrDefault result: {Song}", song?.Name ?? "null");
             }
-            
-            if (song == null) {
+
+            if (song == null)
+            {
                 _logger.LogInformation("Trying Where + FirstOrDefault...");
                 song = _dbContext.Songs.Where(s => s.Id == songId).FirstOrDefault();
                 _logger.LogInformation("Where + FirstOrDefault result: {Song}", song?.Name ?? "null");
             }
-            
-            if (song == null) {
+
+            if (song == null)
+            {
                 _logger.LogInformation("Trying AsNoTracking...");
                 song = _dbContext.Songs.AsNoTracking().FirstOrDefault(s => s.Id == songId);
                 _logger.LogInformation("AsNoTracking result: {Song}", song?.Name ?? "null");
             }
-            
-            if (song == null) {
+
+            if (song == null)
+            {
                 _logger.LogError("All queries failed for songId: {SongId}", songId);
                 var allSongs = _dbContext.Songs.ToList();
                 _logger.LogInformation("Available songs in database: {Count}", allSongs.Count);
-                foreach (var s in allSongs) {
+                foreach (var s in allSongs)
+                {
                     _logger.LogInformation("  ID: {SongId}, Name: {SongName}", s.Id, s.Name);
                 }
                 return Json(new { success = false, message = $"Song not found. Available songs: {string.Join(", ", allSongs.Select(s => $"{s.Id}"))}" });

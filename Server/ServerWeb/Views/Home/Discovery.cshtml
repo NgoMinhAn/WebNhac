@@ -1,0 +1,26 @@
+﻿@model IEnumerable<ServerWeb.Models.Song>
+
+@{
+    ViewData["Title"] = "Khám phá";
+}
+
+<div class="container">
+    <h1>Khám phá bài hát mới</h1>
+    <p>Danh sách các bài hát mới nhất vừa được đăng tải.</p>
+
+    <div class="row">
+        @foreach (var song in Model)
+        {
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <img src="@song.CoverPath" class="card-img-top" alt="@song.Name">
+                    <div class="card-body">
+                        <h5 class="card-title">@song.Name</h5>
+                        <p class="card-text">@song.Author</p>
+                        <button class="btn btn-primary play-btn" data-id="@song.Id">Nghe ngay</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
