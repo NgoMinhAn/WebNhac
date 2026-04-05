@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using ServerWeb.Data;
 using ServerWeb.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace ServerWeb.Controllers
 {
@@ -93,6 +94,20 @@ namespace ServerWeb.Controllers
             var song = await _dbContext.Songs.FindAsync(id);
             if (song == null) return NotFound();
 
+            var liked = false;
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
+                {
+                    var likedPlaylist = await _dbContext.Playlists.FirstOrDefaultAsync(p => p.UserId == userId && p.Name == "Liked");
+                    if (likedPlaylist != null)
+                    {
+                        liked = await _dbContext.PlaylistSongs.AnyAsync(ps => ps.PlaylistId == likedPlaylist.Id && ps.SongId == id);
+                    }
+                }
+            }
+
             return Json(new
             {
                 name = song.Name,
@@ -101,7 +116,8 @@ namespace ServerWeb.Controllers
                 genre = song.Genre,
                 duration = song.Duration.TotalHours >= 1 ? song.Duration.ToString(@"h\:mm\:ss") : song.Duration.ToString(@"mm\:ss"), // Chuyển TimeSpan thành chuỗi
                 imageUrl = song.CoverPath ?? "/images/default-disk.png",
-                audioUrl = song.FilePath // Đây là đường dẫn đến file .mp3
+                audioUrl = song.FilePath, // Đây là đường dẫn đến file .mp3
+                liked
             });
         }
     }
