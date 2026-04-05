@@ -99,7 +99,7 @@ namespace ServerWeb.Controllers
                 author = song.Author,
                 album = song.Album,
                 genre = song.Genre,
-                duration = song.Duration.ToString(@"mm\:ss"), // Chuyển TimeSpan thành chuỗi
+                duration = song.Duration.TotalHours >= 1 ? song.Duration.ToString(@"h\:mm\:ss") : song.Duration.ToString(@"mm\:ss"), // Chuyển TimeSpan thành chuỗi
                 imageUrl = song.CoverPath ?? "/images/default-disk.png",
                 audioUrl = song.FilePath // Đây là đường dẫn đến file .mp3
             });

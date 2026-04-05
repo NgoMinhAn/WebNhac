@@ -7,7 +7,7 @@
 <p>Author: @Model.Author</p>
 <p>Album: @Model.Album</p>
 <p>Genre: @Model.Genre</p>
-<p>Duration: @Model.Duration.ToString(@"mm\:ss")</p>
+<p>Duration: @(Model.Duration.TotalHours >= 1 ? Model.Duration.ToString(@"h\:mm\:ss") : Model.Duration.ToString(@"mm\:ss"))</p>
 @if (!string.IsNullOrEmpty(Model.CoverPath))
 {
     <img src="/Music/@Model.CoverPath" alt="Cover" style="max-width: 200px;" />

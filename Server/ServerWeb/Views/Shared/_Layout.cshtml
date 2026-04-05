@@ -12,219 +12,6 @@
     @await RenderSectionAsync("Styles", required: false)
 
     <style>
-        /* CSS CHO MUSIC PLAYER */
-        .player-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            backdrop-filter: blur(5px);
-        }
-
-        .player-container {
-            background: linear-gradient(135deg, #1e0533 0%, #110d25 100%);
-            width: 90%;
-            max-width: 850px;
-            border-radius: 20px;
-            padding: 40px;
-            position: relative;
-            color: white;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .close-player {
-            position: absolute;
-            top: 20px;
-            right: 25px;
-            font-size: 28px;
-            cursor: pointer;
-            color: rgba(255, 255, 255, 0.5);
-            transition: 0.3s;
-        }
-
-        .close-player:hover {
-            color: white;
-        }
-
-        .player-content {
-            display: flex;
-            gap: 40px;
-            align-items: center;
-        }
-
-        .song-art {
-            width: 280px;
-            height: 280px;
-            border-radius: 15px;
-            object-fit: cover;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
-            border: 2px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .song-details {
-            flex: 1;
-        }
-
-        .song-details h2 {
-            font-size: 36px;
-            margin: 10px 0;
-            font-weight: 700;
-            color: #fff;
-        }
-
-        .song-details p {
-            color: #b3b3b3;
-            margin: 8px 0;
-            font-size: 16px;
-        }
-
-        .song-details strong {
-            color: #1ed760;
-        }
-
-        .player-controls {
-            margin-top: 35px;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 25px;
-            border-radius: 15px;
-        }
-
-        .progress-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .progress-bar {
-            flex: 1;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .progress-fill {
-            width: 0%;
-            height: 100%;
-            background: #1ed760;
-            border-radius: 10px;
-            transition: width 0.1s linear;
-        }
-
-        .control-btns {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 35px;
-        }
-
-        .btn-main {
-            font-size: 50px;
-            cursor: pointer;
-            color: #1ed760;
-            transition: 0.2s;
-        }
-
-        .btn-main:hover {
-            transform: scale(1.1);
-            color: #1fdf64;
-        }
-
-        .sub-btn {
-            cursor: pointer;
-            opacity: 0.6;
-            font-size: 22px;
-            transition: 0.3s;
-        }
-
-        .sub-btn:hover,
-        .sub-btn.active {
-            opacity: 1;
-            color: #1ed760;
-        }
-
-        .sub-btn.repeat-one {
-            opacity: 1;
-            color: #ffb74d;
-        }
-
-        .playlist-dropdown {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            display: none;
-            background: #1d1b2a;
-            border-radius: 10px;
-            margin-top: 8px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
-        }
-
-        .playlist-dropdown li {
-            padding: 12px 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .playlist-dropdown li:last-child {
-            border-bottom: none;
-        }
-
-        .playlist-dropdown li a {
-            color: #f2f2f2;
-            text-decoration: none;
-            display: block;
-            font-size: 14px;
-        }
-
-        .playlist-dropdown li a:hover {
-            color: #1ed760;
-        }
-
-        .playlist-dropdown li small {
-            display: block;
-            color: #9a9a9a;
-            margin-top: 4px;
-            font-size: 12px;
-        }
-
-        .playlist-list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .playlist-delete-btn {
-            background: transparent;
-            border: none;
-            color: #ff6b6b;
-            cursor: pointer;
-            font-size: 16px;
-            opacity: 0.85;
-            transition: opacity 0.2s ease;
-        }
-
-        .playlist-delete-btn:hover {
-            opacity: 1;
-        }
-
-        .playlist-arrow {
-            float: right;
-            transition: transform 0.2s ease;
-        }
-
-        .playlist-arrow.open {
-            transform: rotate(180deg);
-        }
-
         .auth-overlay {
             position: fixed;
             top: 0;
@@ -262,10 +49,7 @@
                 </li>
                 <li><a href="/Home/Library"><i class="fas fa-book-open"></i> Thư viện</a></li>
                 <li><a href="/Home/Discovery"><i class="fas fa-compass"></i> Khám phá</a></li>
-                <li class="playlist-menu-item">
-                    <a href="#" onclick="showUserPlaylists(event)"><i class="fas fa-list"></i> Danh sách phát <i class="fas fa-chevron-down playlist-arrow" id="playlistArrow"></i></a>
-                    <ul class="playlist-dropdown" id="playlistDropdown" style="display:none"></ul>
-                </li>
+                <li><a href="/Playlist/Index"><i class="fas fa-list"></i> Danh sách phát</a></li>
             </ul>
             <button class="btn-create-playlist" onclick="location.href='/Playlist/Create'">
                 <i class="fas fa-plus"></i> Tạo playlist mới
@@ -313,38 +97,41 @@
         </div>
     </div>
 
-    <div id="musicPlayerModal" class="player-overlay">
-        <div class="player-container">
-            <span class="close-player" onclick="closePlayer()">&times;</span>
-            <div class="player-content">
-                <img id="p-img" src="/images/default-disk.png" class="song-art">
-                <div class="song-details">
-                    <p style="text-transform: uppercase; letter-spacing: 2px; font-size: 12px; color: #1ed760;">Đang
-                        phát bài hát</p>
-                    <h2 id="p-title">Tên bài hát</h2>
-                    <p><strong>Nghệ sĩ:</strong> <span id="p-author">...</span></p>
-                    <p><strong>Album:</strong> <span id="p-album">...</span></p>
-                    <p><strong>Thể loại:</strong> <span id="p-genre">...</span></p>
-                </div>
-            </div>
-
-            <div class="player-controls">
-                <div class="progress-container">
-                    <span id="p-current">0:00</span>
-                    <div class="progress-bar" id="p-bar-container" onclick="seekAudio(event)">
-                        <div id="p-fill" class="progress-fill"></div>
-                    </div>
-                    <span id="p-duration">0:00</span>
-                </div>
-                <div class="control-btns">
-                    <i class="fas fa-random sub-btn" id="p-shuffle-btn" title="Phát ngẫu nhiên" onclick="toggleShuffle()"></i>
-                    <i class="fas fa-step-backward sub-btn" id="p-prev-btn" title="Bài trước" onclick="playPrevious()"></i>
-                    <i class="fas fa-play-circle btn-main" id="p-play-btn" onclick="togglePlay()"></i>
-                    <i class="fas fa-step-forward sub-btn" id="p-next-btn" title="Bài tiếp theo" onclick="playNext()"></i>
-                    <i class="fas fa-redo sub-btn" id="p-repeat-btn" title="Lặp lại" onclick="toggleRepeat()"></i>
-                </div>
-            </div>
+    <div id="popupPlayer" class="popup-player" aria-hidden="true">
+      <button type="button" id="closePopupPlayer" class="close-player" aria-label="Đóng">×</button>
+      <div class="music-controller">
+        <div class="duration-bar" id="popupDurationBar">
+          <div id="popupProgress" class="progress-filled"></div>
+          <div class="progress-handle"></div>
         </div>
+        <div id="timeLeft" class="time-left">0:00</div>
+        <div id="timeRight" class="time-right">0:00</div>
+        <div class="control-buttons">
+          <button class="btn" id="favoriteBtn" type="button"><i class="far fa-heart"></i></button>
+          <button class="btn" id="shuffleBtn" type="button"><i class="fas fa-random"></i></button>
+          <button class="btn" id="prevBtn" type="button"><i class="fas fa-step-backward"></i></button>
+          <button class="btn play-btn" id="playPauseBtn" type="button"><i class="fas fa-play"></i></button>
+          <button class="btn" id="nextBtn" type="button"><i class="fas fa-step-forward"></i></button>
+          <button class="btn" id="repeatBtn" type="button"><i class="fas fa-redo"></i></button>
+          <div class="volume-control">
+            <button class="btn" id="volumeIcon" type="button"><i class="fas fa-volume-up"></i></button>
+            <input id="volumeRange" class="volume-range" type="range" min="0" max="100" value="100" aria-label="Volume" />
+          </div>
+        </div>
+      </div>
+      <div class="cover-art">
+        <div class="cover-bg"></div>
+      </div>
+      <div class="track-info">
+        <div class="track-label track-label-song">Bài hát</div>
+        <div id="popupSongTitle" class="song-title">Tên bài hát</div>
+        <div class="track-label track-label-artist">Nghệ sĩ</div>
+        <div id="popupSongAuthor" class="song-artist">Nghệ sĩ</div>
+        <div class="track-label track-label-album">Album</div>
+        <div id="popupSongAlbum" class="song-album">Tên album</div>
+        <div class="track-label track-label-genre">Thể loại</div>
+        <div id="popupSongGenre" class="song-genre">Thể loại</div>
+      </div>
     </div>
 
     <audio id="main-audio"></audio>
@@ -359,195 +146,310 @@
     @await RenderSectionAsync("Scripts", required: false)
 
     <script>
-        // Lấy thẻ audio ngay khi script chạy (thẻ audio lúc này đã tồn tại ở trên)
         const audio = document.getElementById('main-audio');
+        const popupPlayer = document.getElementById('popupPlayer');
+        const popupDurationBar = document.getElementById('popupDurationBar');
+        const popupProgress = document.getElementById('popupProgress');
+        const progressHandle = document.querySelector('.progress-handle');
+        const timeLeft = document.getElementById('timeLeft');
+        const timeRight = document.getElementById('timeRight');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const closePopupPlayer = document.getElementById('closePopupPlayer');
+        const volumeRange = document.getElementById('volumeRange');
+        const volumeIcon = document.getElementById('volumeIcon');
+        const favoriteBtn = document.getElementById('favoriteBtn');
+
         let isPlaying = false;
         let currentPlaylist = [];
-        let currentIndex = 0;
-        let isShuffle = false;
-        let repeatMode = 0; // 0 = none, 1 = all, 2 = one
+        let currentPlaylistIds = [];
+        let currentSongIndex = -1;
+        let currentSongId = null;
 
-        function openPlayer(songId, playlist = []) {
-            const modal = document.getElementById('musicPlayerModal');
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
+        function decodeHtmlEntities(str) {
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = str || '';
+            return textarea.value;
+        }
 
-            if (Array.isArray(playlist) && playlist.length > 0) {
-                currentPlaylist = playlist;
-                currentIndex = currentPlaylist.indexOf(songId);
-                if (currentIndex === -1) {
-                    currentPlaylist.unshift(songId);
-                    currentIndex = 0;
+        function getSongFromCard(card) {
+            if (!card) return null;
+            return {
+                Id: Number(card.dataset.songId),
+                Name: decodeHtmlEntities(card.dataset.songName || card.dataset.name || ''),
+                Author: decodeHtmlEntities(card.dataset.songAuthor || card.dataset.author || ''),
+                Album: decodeHtmlEntities(card.dataset.songAlbum || card.dataset.album || ''),
+                Genre: decodeHtmlEntities(card.dataset.songGenre || card.dataset.genre || ''),
+                Duration: card.dataset.songDuration || card.dataset.duration || '',
+                FilePath: card.dataset.filePath,
+                CoverPath: card.dataset.coverPath || ''
+            };
+        }
+
+        function getPagePlaylist() {
+            if (Array.isArray(window.pagePlaylist) && window.pagePlaylist.length) {
+                return window.pagePlaylist;
+            }
+            const cards = document.querySelectorAll('.music-card[data-song-id][data-file-path]');
+            return Array.from(cards).map(getSongFromCard).filter(song => song && song.FilePath);
+        }
+
+        function showPopupPlayer() {
+            if (!popupPlayer) return;
+            popupPlayer.classList.add('visible');
+            popupPlayer.setAttribute('aria-hidden', 'false');
+        }
+
+        function hidePopupPlayer() {
+            if (!popupPlayer) return;
+            popupPlayer.classList.remove('visible');
+            popupPlayer.setAttribute('aria-hidden', 'true');
+        }
+
+        function updatePlayerDisplay(song) {
+            if (!song) return;
+            const titleEl = document.getElementById('popupSongTitle');
+            const authorEl = document.getElementById('popupSongAuthor');
+            const albumEl = document.getElementById('popupSongAlbum');
+            const genreEl = document.getElementById('popupSongGenre');
+            const coverBg = document.querySelector('.cover-bg');
+
+            if (titleEl) titleEl.textContent = song.Name || 'Tên bài hát';
+            if (authorEl) authorEl.textContent = song.Author || 'Nghệ sĩ';
+            if (albumEl) albumEl.textContent = song.Album || 'Single';
+            if (genreEl) genreEl.textContent = song.Genre || 'Âm nhạc';
+
+            if (coverBg) {
+                if (song.CoverPath) {
+                    coverBg.style.backgroundImage = `url('${song.CoverPath}')`;
+                    coverBg.style.backgroundSize = 'cover';
+                    coverBg.style.backgroundPosition = 'center';
+                } else {
+                    coverBg.style.backgroundImage = 'none';
+                    coverBg.style.backgroundColor = '#29272e';
                 }
-            } else {
-                currentPlaylist = [songId];
-                currentIndex = 0;
+            }
+        }
+
+        function updateFavoriteIcon(isLiked) {
+            if (!favoriteBtn) return;
+            const icon = favoriteBtn.querySelector('i');
+            if (icon) icon.className = isLiked ? 'fas fa-heart' : 'far fa-heart';
+        }
+
+        function toggleFavorite() {
+            if (!favoriteBtn || currentSongId === null) return;
+            fetch('/Home/ToggleLike', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ songId: Number(currentSongId) })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data || !data.success) {
+                        console.warn('Unable to toggle favorite:', data?.message);
+                        return;
+                    }
+                    updateFavoriteIcon(data.liked);
+                    window.dispatchEvent(new CustomEvent('songLikeToggled', { detail: { songId: currentSongId, liked: data.liked } }));
+                })
+                .catch(err => console.error('Error toggling favorite:', err));
+        }
+
+        function updatePlayButton() {
+            if (!playPauseBtn) return;
+            const icon = playPauseBtn.querySelector('i');
+            if (icon) icon.className = isPlaying ? 'fas fa-pause' : 'fas fa-play';
+        }
+
+        function setPlaylist(playlist, songId = null) {
+            if (Array.isArray(playlist) && playlist.length) {
+                if (typeof playlist[0] === 'object') {
+                    currentPlaylist = playlist;
+                    currentPlaylistIds = playlist.map(item => Number(item.Id));
+                } else {
+                    currentPlaylist = [];
+                    currentPlaylistIds = playlist.map(id => Number(id));
+                }
+            }
+            if (songId !== null) {
+                currentSongIndex = currentPlaylistIds.indexOf(Number(songId));
+            }
+        }
+
+        function fetchSongDetails(songId) {
+            return fetch(`/Song/GetSongDetails/${songId}`)
+                .then(res => res.json())
+                .then(song => ({
+                    Id: Number(songId),
+                    Name: song.name,
+                    Author: song.author,
+                    Album: song.album || 'Single',
+                    Genre: song.genre || 'Âm nhạc',
+                    Duration: song.duration,
+                    FilePath: song.audioUrl,
+                    CoverPath: song.imageUrl
+                }));
+        }
+
+        function playSong(song) {
+            if (!song || !song.FilePath) return;
+            const songId = Number(song.Id);
+            if (currentSongId === songId && audio.src && audio.src.includes(encodeURI(song.FilePath))) {
+                togglePlay();
+                return;
             }
 
-            loadSong(currentPlaylist[currentIndex]);
+            setPlaylist(getPagePlaylist(), songId);
+            currentSongIndex = currentPlaylistIds.indexOf(songId);
+            currentSongId = songId;
+            window.currentSongId = songId;
+
+            audio.src = encodeURI(song.FilePath);
+            audio.play().then(() => {
+                isPlaying = true;
+                updatePlayButton();
+                showPopupPlayer();
+            }).catch(err => {
+                console.error('Lỗi phát nhạc:', err);
+                isPlaying = false;
+                updatePlayButton();
+            });
+
+            updatePlayerDisplay(song);
+        }
+
+        function playSongFromCard(card) {
+            const song = getSongFromCard(card);
+            if (!song) return;
+            playSong(song);
+        }
+
+        function openPlayer(songId, playlist = null) {
+            if (playlist) {
+                setPlaylist(playlist, songId);
+            } else {
+                setPlaylist(getPagePlaylist(), songId);
+            }
+
+            fetchSongDetails(songId)
+                .then(song => {
+                    if (!song) return;
+                    playSong(song);
+                })
+                .catch(err => console.error('Lỗi lấy dữ liệu bài hát:', err));
         }
 
         function loadSong(songId) {
-            fetch(`/Song/GetSongDetails/${songId}`)
-                .then(res => res.json())
+            setPlaylist(currentPlaylistIds, songId);
+            currentSongIndex = currentPlaylistIds.indexOf(Number(songId));
+            fetchSongDetails(songId)
                 .then(song => {
-                    document.getElementById('p-title').innerText = song.name;
-                    document.getElementById('p-author').innerText = song.author;
-                    document.getElementById('p-album').innerText = song.album || 'Single';
-                    document.getElementById('p-genre').innerText = song.genre || 'Âm nhạc';
-                    document.getElementById('p-duration').innerText = song.duration;
-                    if (song.imageUrl) document.getElementById('p-img').src = song.imageUrl;
-
-                    if (song.audioUrl) {
-                        audio.src = song.audioUrl;
-                        audio.load();
-                        audio.play()
-                            .then(() => {
-                                isPlaying = true;
-                                updatePlayBtn();
-                            })
-                            .catch(err => console.error("Lỗi tự động phát:", err));
-                    }
+                    if (!song) return;
+                    playSong(song);
                 })
-                .catch(err => console.error("Lỗi lấy dữ liệu bài hát:", err));
+                .catch(err => console.error('Lỗi tải bài hát:', err));
         }
 
-        function playNext() {
-            if (currentPlaylist.length === 0) return;
-
-            if (repeatMode === 2) {
-                audio.currentTime = 0;
-                audio.play();
-                return;
-            }
-
-            if (isShuffle) {
-                let nextIndex = currentIndex;
-                while (nextIndex === currentIndex && currentPlaylist.length > 1) {
-                    nextIndex = Math.floor(Math.random() * currentPlaylist.length);
-                }
-                currentIndex = nextIndex;
-            } else {
-                currentIndex++;
-            }
-
-            if (currentIndex >= currentPlaylist.length) {
-                if (repeatMode === 1) {
-                    currentIndex = 0;
-                } else {
-                    currentIndex = currentPlaylist.length - 1;
-                    audio.pause();
-                    isPlaying = false;
-                    updatePlayBtn();
-                    return;
-                }
-            }
-
-            loadSong(currentPlaylist[currentIndex]);
+        function nextSong() {
+            if (!currentPlaylistIds.length) return;
+            currentSongIndex = (currentSongIndex + 1) % currentPlaylistIds.length;
+            loadSong(currentPlaylistIds[currentSongIndex]);
         }
 
-        function playPrevious() {
-            if (currentPlaylist.length === 0) return;
-
-            if (audio.currentTime > 3) {
-                audio.currentTime = 0;
-                return;
-            }
-
-            if (isShuffle) {
-                currentIndex = Math.floor(Math.random() * currentPlaylist.length);
-            } else {
-                currentIndex--;
-            }
-
-            if (currentIndex < 0) {
-                if (repeatMode === 1) {
-                    currentIndex = currentPlaylist.length - 1;
-                } else {
-                    currentIndex = 0;
-                }
-            }
-
-            loadSong(currentPlaylist[currentIndex]);
+        function prevSong() {
+            if (!currentPlaylistIds.length) return;
+            currentSongIndex = (currentSongIndex - 1 + currentPlaylistIds.length) % currentPlaylistIds.length;
+            loadSong(currentPlaylistIds[currentSongIndex]);
         }
 
-        function toggleShuffle() {
-            isShuffle = !isShuffle;
-            document.getElementById('p-shuffle-btn').classList.toggle('active', isShuffle);
-        }
-
-        function toggleRepeat() {
-            repeatMode = (repeatMode + 1) % 3;
-            const btn = document.getElementById('p-repeat-btn');
-            btn.classList.remove('active', 'repeat-one');
-
-            if (repeatMode === 1) {
-                btn.classList.add('active');
-                btn.title = 'Lặp lại tất cả';
-            } else if (repeatMode === 2) {
-                btn.classList.add('repeat-one');
-                btn.title = 'Lặp lại 1 bài';
-            } else {
-                btn.title = 'Lặp lại';
-            }
-        }
-
-        // Cập nhật thanh tiến trình và thời gian
         audio.ontimeupdate = () => {
-            if (audio.duration) {
+            if (audio.duration && popupProgress) {
                 const progress = (audio.currentTime / audio.duration) * 100;
-                document.getElementById('p-fill').style.width = progress + "%";
-                document.getElementById('p-current').innerText = formatTime(audio.currentTime);
+                popupProgress.style.width = `${progress}%`;
+                if (progressHandle) progressHandle.style.left = `${progress}%`;
+                if (timeLeft) timeLeft.textContent = formatTime(audio.currentTime);
+                if (timeRight) timeRight.textContent = formatTime(audio.duration);
             }
         };
 
-        audio.onloadedmetadata = () => {
-            if (audio.duration) {
-                document.getElementById('p-duration').innerText = formatTime(audio.duration);
-            }
-        };
-
-        audio.onended = () => {
-            playNext();
-        };
-
-        // Hàm tua nhạc khi click vào thanh progress
         function seekAudio(e) {
-            const bar = document.getElementById('p-bar-container');
-            const clickX = e.offsetX;
-            const width = bar.clientWidth;
-            if (audio.duration) {
-                audio.currentTime = (clickX / width) * audio.duration;
-            }
+            const bar = popupDurationBar;
+            if (!bar || !audio.duration) return;
+            const rect = bar.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+            audio.currentTime = percentage * audio.duration;
         }
 
         function formatTime(seconds) {
-            let min = Math.floor(seconds / 60);
-            let sec = Math.floor(seconds % 60);
-            return min + ":" + (sec < 10 ? "0" + sec : sec);
+            if (!isFinite(seconds)) return '0:00';
+            const min = Math.floor(seconds / 60);
+            const sec = Math.floor(seconds % 60);
+            return min + ':' + (sec < 10 ? '0' + sec : sec);
         }
 
         function togglePlay() {
-            if (audio.src) {
-                if (audio.paused) {
-                    audio.play();
-                    isPlaying = true;
-                } else {
-                    audio.pause();
-                    isPlaying = false;
-                }
-                updatePlayBtn();
+            if (!audio.src) return;
+            if (audio.paused) {
+                audio.play().catch(() => {});
+                isPlaying = true;
+            } else {
+                audio.pause();
+                isPlaying = false;
             }
+            updatePlayButton();
         }
 
-        function updatePlayBtn() {
-            const btn = document.getElementById('p-play-btn');
-            btn.className = isPlaying ? "fas fa-pause-circle btn-main" : "fas fa-play-circle btn-main";
+        function stopCurrentSong() {
+            if (!audio) return;
+            audio.pause();
+            audio.currentTime = 0;
+            audio.src = '';
+            isPlaying = false;
+            currentSongId = null;
+            currentSongIndex = -1;
+            currentPlaylist = [];
+            currentPlaylistIds = [];
+            updatePlayButton();
+            hidePopupPlayer();
         }
 
-        function closePlayer() {
-            document.getElementById('musicPlayerModal').style.display = 'none';
-            document.body.style.overflow = 'auto';
+        if (closePopupPlayer) {
+            closePopupPlayer.addEventListener('click', stopCurrentSong);
+        }
+
+        if (volumeRange) {
+            volumeRange.addEventListener('input', (e) => {
+                if (!audio) return;
+                const normalized = Math.min(1, Math.max(0, e.target.value / 100));
+                audio.volume = normalized;
+                if (volumeIcon?.querySelector('i')) {
+                    const icon = volumeIcon.querySelector('i');
+                    icon.className = normalized === 0 ? 'fas fa-volume-mute' : (normalized < 0.35 ? 'fas fa-volume-low' : (normalized < 0.8 ? 'fas fa-volume' : 'fas fa-volume-high'));
+                }
+            });
+        }
+
+        if (popupDurationBar) {
+            popupDurationBar.addEventListener('click', seekAudio);
+        }
+
+        if (playPauseBtn) {
+            playPauseBtn.addEventListener('click', togglePlay);
+        }
+
+        if (favoriteBtn) {
+            favoriteBtn.addEventListener('click', toggleFavorite);
+        }
+
+        if (document.getElementById('shuffleBtn')) {
+            document.getElementById('shuffleBtn').addEventListener('click', () => {
+                currentPlaylistIds = currentPlaylistIds.sort(() => Math.random() - 0.5);
+                currentSongIndex = currentPlaylistIds.indexOf(Number(currentSongId));
+            });
         }
 
         function showUserPlaylists(event) {

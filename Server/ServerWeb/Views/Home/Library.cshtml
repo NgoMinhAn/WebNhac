@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Thư viện";
+    string FormatDuration(TimeSpan duration) => duration.TotalHours >= 1 ? duration.ToString(@"h\:mm\:ss") : duration.ToString(@"mm\:ss");
     var allSongs = Model.ToList();
     var playlistSongs = allSongs.Take(4).ToList();
     var allArtists = allSongs.Select(s => s.Author).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(a => a).ToList();
@@ -9,43 +10,7 @@
     var likedArtists = likedSongs.Select(s => s.Author).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(a => a).ToList();
 }
 
-<div class="content-area" style="min-height: calc(100vh - 100px);">    <div id="popupPlayer" class="popup-player" aria-hidden="true">
-      <button type="button" id="closePopupPlayer" class="close-player" aria-label="Đóng">×</button>
-      <div class="music-controller">
-        <div class="duration-bar">
-          <div id="popupProgress" class="progress-filled"></div>
-          <div class="progress-handle"></div>
-        </div>
-        <div id="timeLeft" class="time-left">0:00</div>
-        <div id="timeRight" class="time-right">0:00</div>
-        <div class="control-buttons">
-          <button class="btn" id="favoriteBtn" type="button"><i class="far fa-heart"></i></button>
-          <button class="btn" id="shuffleBtn" type="button"><i class="fas fa-random"></i></button>
-          <button class="btn" id="prevBtn" type="button"><i class="fas fa-step-backward"></i></button>
-          <button class="btn play-btn" id="playPauseBtn" type="button"><i class="fas fa-play"></i></button>
-          <button class="btn" id="nextBtn" type="button"><i class="fas fa-step-forward"></i></button>
-          <button class="btn" id="repeatBtn" type="button"><i class="fas fa-redo"></i></button>
-          <div class="volume-control">
-            <button class="btn" id="volumeIcon" type="button"><i class="fas fa-volume-up"></i></button>
-            <input id="volumeRange" class="volume-range" type="range" min="0" max="100" value="100" aria-label="Volume" />
-          </div>
-        </div>
-      </div>
-      <div class="cover-art">
-        <div class="cover-bg"></div>
-        <div class="cover-icon"></div>
-      </div>
-      <div class="track-info">
-        <div class="track-label track-label-song">Bài hát</div>
-        <div id="popupSongTitle" class="song-title">Tên bài hát</div>
-        <div class="track-label track-label-artist">Nghệ sĩ</div>
-        <div id="popupSongAuthor" class="song-artist">Nghệ sĩ</div>
-        <div class="track-label track-label-album">Album</div>
-        <div id="popupSongAlbum" class="song-album">Tên album</div>
-        <div class="track-label track-label-genre">Thể loại</div>
-        <div id="popupSongGenre" class="song-genre">Thể loại</div>
-      </div>
-    </div>
+<div class="content-area" style="min-height: calc(100vh - 100px);">
     <div style="margin-bottom: 35px;">
         <h1 class="title-yellow">Thư viện nhạc của bạn</h1>
         <p class="subtitle" style="max-width: 740px;">Những bản nhạc, nghệ sĩ, album, playlist yêu thích được lưu trong thư viện của bạn.</p>
@@ -66,11 +31,11 @@
             {
                 foreach (var song in playlistSongs)
                 {
-                    <div class="music-card" data-song-id="@song.Id" data-song-name="@song.Name" data-song-author="@song.Author" data-song-album="@song.Album" data-song-genre="@song.Genre" @if (!string.IsNullOrEmpty(song.FilePath)) { <text>data-file-path="@Url.Content(song.FilePath)"</text> } @if (!string.IsNullOrEmpty(song.CoverPath)) { <text>data-cover-path="@Url.Content(song.CoverPath)"</text> } @if (!string.IsNullOrEmpty(song.FilePath)) { <text>onclick="playSongFromCard(this)"</text> }>
+                    <div class="music-card" data-song-id="@song.Id" data-song-name="@song.Name" data-song-author="@song.Author" data-song-album="@song.Album" data-song-genre="@song.Genre" data-song-duration="@FormatDuration(song.Duration)" @if (!string.IsNullOrEmpty(song.FilePath)) { <text>data-file-path="@Url.Content(song.FilePath)"</text> } @if (!string.IsNullOrEmpty(song.CoverPath)) { <text>data-cover-path="@Url.Content(song.CoverPath)"</text> } @if (!string.IsNullOrEmpty(song.FilePath)) { <text>onclick="playSongFromCard(this)"</text> }>
                         <div class="card-thumb" style="background-image: url('@(string.IsNullOrEmpty(song.CoverPath) ? "https://via.placeholder.com/300x180?text=No+Cover" : Url.Content(song.CoverPath))'); background-size: cover; background-position: center;"></div>
                         <div class="card-info">
                             <h3>@song.Name</h3>
-                            <p>@song.Author</p>
+                            <p>@song.Author • @FormatDuration(song.Duration)</p>
                         </div>
                     </div>
                 }
@@ -101,429 +66,187 @@
 
 @section Scripts {
 <script>
-    console.log('Library script loaded');
-    
-    // Simple test to see if script runs
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM loaded');
-        
-        // Try to attach event listener after DOM is loaded
-        const favoriteBtn = document.getElementById('favoriteBtn');
-        console.log('favoriteBtn element:', favoriteBtn);
-        
-        if (favoriteBtn) {
-            favoriteBtn.addEventListener('click', function() {
-                console.log('Like button clicked');
-                
-                if (!window.currentSongId) {
-                    console.warn('No song is currently playing');
-                    return;
-                }
-                
-                console.log('Sending request to toggle like for song:', window.currentSongId);
-                fetch('/Home/ToggleLike', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ songId: window.currentSongId })
-                })
-                .then(response => {
-                    console.log('Response status:', response.status);
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok: ' + response.status);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('Response data:', data);
-                    if (data.success) {
-                        console.log('Like toggled successfully, liked:', data.liked);
-                        updateFavoriteIcon(data.liked);
-                        if (data.liked) {
-                            const song = allSongs.find(s => s.Id === window.currentSongId);
-                            if (song) {
-                                window.likedSongs.push(song);
-                                console.log('Added song to liked list');
-                            }
-                        } else {
-                            window.likedSongs = window.likedSongs.filter(s => s.Id !== window.currentSongId);
-                            console.log('Removed song from liked list');
-                        }
-                        likedArtists = [...new Set(window.likedSongs.map(s => s.Author))].sort((a, b) => a.localeCompare(b));
-                        if (currentMode === 'song') {
-                            renderSongCards(window.likedSongs);
-                        } else {
-                            renderArtistCards(likedArtists);
-                        }
-                        console.log('Song ' + (data.liked ? 'liked' : 'unliked') + ' successfully!');
-                    } else {
-                        console.error('Toggle like failed:', data.message || data);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error toggling like:', error);
-                    alert('Error toggling like: ' + error.message);
-                });
-            });
-            console.log('Event listener attached to favoriteBtn');
-        } else {
-            console.log('favoriteBtn not found');
-        }
-    });
-    
-    // Global variables
     window.currentSongId = null;
-    window.likedSongs = []; // Initialize as empty array, will be set later
-    
-    // Initialize data variables
-    let allSongs = [];
-    let artists = [];
-    let likedSongs = [];
-    let likedArtists = [];
-    let playlist = []; // Initialize playlist here
-    
-    // Load data from server
-    try {
-        allSongs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(allSongs.Select(s => new { s.Id, s.Name, s.Author, s.Album, s.Genre, FilePath = !string.IsNullOrEmpty(s.FilePath) ? Url.Content(s.FilePath) : null, CoverPath = !string.IsNullOrEmpty(s.CoverPath) ? Url.Content(s.CoverPath) : null, Duration = s.Duration.ToString(@"mm\:ss") }).ToList()));
-        artists = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(allArtists));
-        likedSongs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(likedSongs.Select(s => new { s.Id, s.Name, s.Author, s.Album, s.Genre, FilePath = !string.IsNullOrEmpty(s.FilePath) ? Url.Content(s.FilePath) : null, CoverPath = !string.IsNullOrEmpty(s.CoverPath) ? Url.Content(s.CoverPath) : null, Duration = s.Duration.ToString(@"mm\:ss") }).ToList()));
-        likedArtists = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(likedArtists));
-        
-        // Update global variable
-        window.likedSongs = likedSongs;
-        
-        // Set playlist after data is loaded
-        playlist = likedSongs || [];
-        
-        console.log('Songs loaded:', allSongs.length);
-        console.log('All songs:', allSongs);
-        console.log('Liked songs:', likedSongs);
-        console.log('First few song IDs:', allSongs.slice(0, 5).map(s => s.Id));
-    } catch (e) {
-        console.error('Error parsing song data:', e);
-    }
+    window.likedSongs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(likedSongs.Select(s => new { s.Id, s.Name, s.Author, s.Album, s.Genre, FilePath = !string.IsNullOrEmpty(s.FilePath) ? Url.Content(s.FilePath) : null, CoverPath = !string.IsNullOrEmpty(s.CoverPath) ? Url.Content(s.CoverPath) : null, Duration = s.Duration.TotalHours >= 1 ? s.Duration.ToString(@"h\:mm\:ss") : s.Duration.ToString(@"mm\:ss") }).ToList()));
 
-    const tabSongs = document.getElementById('tabSongs');
-    const tabArtists = document.getElementById('tabArtists');
-    const songContainer = document.getElementById('songContainer');
-    const librarySearch = document.getElementById('librarySearch');
+    const allSongs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(allSongs.Select(s => new { s.Id, s.Name, s.Author, s.Album, s.Genre, FilePath = !string.IsNullOrEmpty(s.FilePath) ? Url.Content(s.FilePath) : null, CoverPath = !string.IsNullOrEmpty(s.CoverPath) ? Url.Content(s.CoverPath) : null, Duration = s.Duration.TotalHours >= 1 ? s.Duration.ToString(@"h\:mm\:ss") : s.Duration.ToString(@"mm\:ss") }).ToList()));
+    let likedArtists = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(likedArtists));
 
-    const popupPlayer = document.getElementById('popupPlayer');
-    const closePopupPlayer = document.getElementById('closePopupPlayer');
-    const playPauseBtn = document.getElementById('playPauseBtn');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const favoriteBtn = document.getElementById('favoriteBtn');
-    console.log('favoriteBtn element:', favoriteBtn);
-    const volumeRange = document.getElementById('volumeRange');
-    const volumeIcon = document.getElementById('volumeIcon');
-    const durationBar = document.querySelector('.duration-bar');
-    const popupProgress = document.getElementById('popupProgress');
-    const progressHandle = document.querySelector('.progress-handle');
-    const timeLeft = document.getElementById('timeLeft');
-    const timeRight = document.getElementById('timeRight');
-    const popupSongTitle = document.getElementById('popupSongTitle');
-    const popupSongAuthor = document.getElementById('popupSongAuthor');
-    const popupSongAlbum = document.getElementById('popupSongAlbum');
-    const popupSongGenre = document.getElementById('popupSongGenre');
-    const coverIcon = document.querySelector('.cover-icon');
-
-    let currentAudio = null;
-    let isPlaying = false;
-    let currentSongId = null;
-    let currentSongIndex = -1;
     let currentMode = 'song';
 
-    function showPopupPlayer() {
-      if (!popupPlayer) return;
-      popupPlayer.classList.add('visible');
-      popupPlayer.setAttribute('aria-hidden', 'false');
-    }
-
-    function hidePopupPlayer() {
-      if (!popupPlayer) return;
-      popupPlayer.classList.remove('visible');
-      popupPlayer.setAttribute('aria-hidden', 'true');
-    }
-
     function updateFavoriteIcon(isLiked) {
-      const icon = favoriteBtn?.querySelector('i');
-      if (icon) icon.className = isLiked ? 'fas fa-heart' : 'far fa-heart';
+        const favoriteBtn = document.getElementById('favoriteBtn');
+        const icon = favoriteBtn?.querySelector('i');
+        if (icon) icon.className = isLiked ? 'fas fa-heart' : 'far fa-heart';
     }
 
-    function updatePlayerDisplay(name, author, coverPath, album, genre) {
-      if (popupSongTitle) popupSongTitle.textContent = name || 'Tên bài hát';
-      if (popupSongAuthor) popupSongAuthor.textContent = author || 'Nghệ sĩ';
-      if (popupSongAlbum) popupSongAlbum.textContent = album || 'Tên album';
-      if (popupSongGenre) popupSongGenre.textContent = genre || 'Thể loại';
+    function refreshLikedArtists() {
+        likedArtists = Array.from(new Set(window.likedSongs.map(s => s.Author)))
+            .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    }
 
-      if (coverIcon) {
-        if (coverPath) {
-          coverIcon.style.backgroundImage = `url('${coverPath}')`;
-          coverIcon.style.backgroundSize = 'cover';
-          coverIcon.style.backgroundPosition = 'center';
+    window.addEventListener('songLikeToggled', event => {
+        const detail = event?.detail;
+        if (!detail) return;
+        const songId = Number(detail.songId);
+        const liked = Boolean(detail.liked);
+        if (liked) {
+            const song = allSongs.find(s => Number(s.Id) === songId);
+            if (song && !window.likedSongs.some(s => Number(s.Id) === songId)) {
+                window.likedSongs.push(song);
+            }
         } else {
-          coverIcon.style.backgroundImage = 'none';
-          coverIcon.style.backgroundColor = '#29272e';
+            window.likedSongs = window.likedSongs.filter(s => Number(s.Id) !== songId);
         }
-      }
-    }
-
-    function updatePlayButton() {
-      const icon = playPauseBtn?.querySelector('i');
-      if (icon) icon.className = isPlaying ? 'fas fa-pause' : 'fas fa-play';
-    }
-
-    function stopCurrentSong() {
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
-        currentAudio.src = '';
-        currentAudio = null;
-      }
-      isPlaying = false;
-      currentSongId = null;
-      window.currentSongId = null; // Clear global variable
-      currentSongIndex = -1;
-      updatePlayButton();
-      hidePopupPlayer();
-    }
-
-    function togglePlayPause() {
-      if (!currentAudio) return;
-      if (isPlaying) {
-        currentAudio.pause();
-        isPlaying = false;
-      } else {
-        currentAudio.play().catch(() => {});
-        isPlaying = true;
-      }
-      updatePlayButton();
-    }
-
-    function updateProgressBar() {
-      if (!currentAudio || !popupProgress || !progressHandle || !durationBar) return;
-      const progress = (currentAudio.currentTime / currentAudio.duration) * 100;
-      popupProgress.style.width = `${progress}%`;
-      progressHandle.style.left = `${progress}%`;
-
-      const formatTime = seconds => {
-        if (!isFinite(seconds)) return '0:00';
-        const m = Math.floor(seconds / 60);
-        const s = Math.floor(seconds % 60).toString().padStart(2, '0');
-        return `${m}:${s}`;
-      };
-
-      if (timeLeft) timeLeft.textContent = formatTime(currentAudio.currentTime);
-      if (timeRight) timeRight.textContent = formatTime(currentAudio.duration);
-    }
-
-    function seekToPosition(event) {
-      if (!currentAudio || !durationBar) return;
-      const rect = durationBar.getBoundingClientRect();
-      const clickX = event.clientX - rect.left;
-      const percentage = Math.max(0, Math.min(1, clickX / rect.width));
-      currentAudio.currentTime = percentage * currentAudio.duration;
-      updateProgressBar();
-    }
-
-    function playSong(song) {
-      if (!song || !song.FilePath) return;
-
-      const existingIndex = playlist.findIndex(x => x.Id === song.Id);
-      currentSongIndex = existingIndex >= 0 ? existingIndex : -1;
-      currentSongId = song.Id;
-      window.currentSongId = song.Id; // Set global variable
-      const isLiked = window.likedSongs.some(s => s.Id === currentSongId);
-      updateFavoriteIcon(isLiked);
-
-      if (currentAudio) {
-        if (currentSongId === song.Id) {
-          // If the same song is clicked while already loaded, show popup and resume if paused.
-          if (!popupPlayer.classList.contains('visible')) showPopupPlayer();
-          if (!isPlaying) {
-            currentAudio.play().catch(() => {});
-            isPlaying = true;
-          } else {
-            togglePlayPause();
-          }
-          updatePlayButton();
-          return;
+        refreshLikedArtists();
+        if (currentMode === 'song') {
+            renderSongCards(window.likedSongs);
+        } else {
+            renderArtistCards(likedArtists);
         }
-        stopCurrentSong();
-      }
-
-      currentAudio = new Audio(song.FilePath);
-      currentAudio.volume = 1.0;
-      currentAudio.addEventListener('timeupdate', updateProgressBar);
-      currentAudio.addEventListener('ended', () => {
-        isPlaying = false;
-        updatePlayButton();
-        const nextIndex = (currentSongIndex + 1) % playlist.length;
-        if (playlist.length) playSong(playlist[nextIndex]);
-      });
-
-      updatePlayerDisplay(song.Name, song.Author, song.CoverPath, song.Album, song.Genre);
-      showPopupPlayer();
-
-      currentAudio.play().then(() => {
-        isPlaying = true;
-        updatePlayButton();
-      }).catch(() => {
-        isPlaying = false;
-        updatePlayButton();
-      });
-    }
+    });
 
     function playSongFromCard(card) {
-      console.log('playSongFromCard called with card:', card);
-      console.log('card.dataset:', card.dataset);
-      const song = {
-        Id: parseInt(card.dataset.songId),
-        Name: card.dataset.songName,
-        Author: card.dataset.songAuthor,
-        Album: card.dataset.songAlbum || '',
-        Genre: card.dataset.songGenre || '',
-        FilePath: card.dataset.filePath,
-        CoverPath: card.dataset.coverPath || ''
-      };
-      console.log('Extracted song:', song);
-      playSong(song);
+        const song = {
+            Id: Number(card.dataset.songId),
+            Name: card.dataset.songName,
+            Author: card.dataset.songAuthor,
+            Album: card.dataset.songAlbum || '',
+            Genre: card.dataset.songGenre || '',
+            FilePath: card.dataset.filePath,
+            CoverPath: card.dataset.coverPath || ''
+        };
+        playSong(song);
     }
 
     function renderSongCards(list) {
-      songContainer.innerHTML = '';
-      if (!list.length) {
-        songContainer.innerHTML = '<p style="grid-column:1/-1;color:#ccc;">Không tìm thấy kết quả.</p>';
-        return;
-      }
-      list.forEach(song => {
-        if (!song.FilePath) return;
-        const card = document.createElement('div');
-        card.className = 'music-card';
-        card.dataset.songId = song.Id;
-        card.dataset.songName = song.Name;
-        card.dataset.songAuthor = song.Author;
-        card.dataset.songAlbum = song.Album;
-        card.dataset.songGenre = song.Genre;
-        card.dataset.filePath = song.FilePath;
-        card.dataset.coverPath = song.CoverPath;
-        card.onclick = () => playSong(song);
+        const songContainer = document.getElementById('songContainer');
+        if (!songContainer) return;
+        songContainer.innerHTML = '';
+        if (!list?.length) {
+            songContainer.innerHTML = '<p style="grid-column:1/-1;color:#ccc;">Không tìm thấy kết quả.</p>';
+            return;
+        }
+        list.forEach(song => {
+            if (!song.FilePath) return;
+            const card = document.createElement('div');
+            card.className = 'music-card';
+            card.dataset.songId = song.Id;
+            card.dataset.songName = song.Name;
+            card.dataset.songAuthor = song.Author;
+            card.dataset.songAlbum = song.Album;
+            card.dataset.songGenre = song.Genre;
+            card.dataset.filePath = song.FilePath;
+            card.dataset.coverPath = song.CoverPath || '';
+            card.onclick = () => playSongFromCard(card);
 
-        const cover = document.createElement('div');
-        cover.className = 'card-thumb';
-        cover.style.backgroundImage = `url('${song.CoverPath ? song.CoverPath : 'https://via.placeholder.com/300x180?text=no+cover'}')`;
-        cover.style.backgroundSize = 'cover';
-        cover.style.backgroundPosition = 'center';
+            const cover = document.createElement('div');
+            cover.className = 'card-thumb';
+            cover.style.backgroundImage = `url('${song.CoverPath || 'https://via.placeholder.com/300x180?text=no+cover'}')`;
+            cover.style.backgroundSize = 'cover';
+            cover.style.backgroundPosition = 'center';
+            card.dataset.songDuration = song.Duration || '';
 
-        const info = document.createElement('div');
-        info.className = 'card-info';
-        info.innerHTML = `<h3>${song.Name}</h3><p>${song.Author}</p>`;
+            const info = document.createElement('div');
+            info.className = 'card-info';
+            info.innerHTML = `<h3>${song.Name}</h3><p>${song.Author} • ${song.Duration || '00:00'}</p>`;
 
-        card.append(cover, info);
-        songContainer.append(card);
-      });
+            card.append(cover, info);
+            songContainer.append(card);
+        });
     }
 
     function renderArtistCards(list) {
-      songContainer.innerHTML = '';
-      if (!list.length) {
-        songContainer.innerHTML = '<p style="grid-column:1/-1;color:#ccc;">Không tìm thấy kết quả.</p>';
-        return;
-      }
-      list.forEach(artist => {
-        const card = document.createElement('div');
-        card.className = 'music-card';
-        card.onclick = () => {
-          const byArtist = window.likedSongs.filter(x => x.Author.toLowerCase() === artist.toLowerCase());
-          renderSongCards(byArtist);
-          tabSongs.classList.remove('btn-active');
-          tabArtists.classList.add('btn-active');
-        };
-
-        const info = document.createElement('div');
-        info.className = 'card-info';
-        info.innerHTML = `<h3>${artist}</h3><p>${window.likedSongs.filter(x=>x.Author.toLowerCase()===artist.toLowerCase()).length} bài hát</p>`;
-
-        card.append(info);
-        songContainer.append(card);
-      });
+        const songContainer = document.getElementById('songContainer');
+        if (!songContainer) return;
+        songContainer.innerHTML = '';
+        if (!list?.length) {
+            songContainer.innerHTML = '<p style="grid-column:1/-1;color:#ccc;">Không tìm thấy kết quả.</p>';
+            return;
+        }
+        list.forEach(artist => {
+            const card = document.createElement('div');
+            card.className = 'music-card';
+            card.onclick = () => {
+                const byArtist = window.likedSongs.filter(x => x.Author.toLowerCase() === artist.toLowerCase());
+                renderSongCards(byArtist);
+                currentMode = 'song';
+                document.getElementById('tabSongs')?.classList.add('btn-active');
+                document.getElementById('tabArtists')?.classList.remove('btn-active');
+            };
+            const info = document.createElement('div');
+            info.className = 'card-info';
+            info.innerHTML = `<h3>${artist}</h3><p>${window.likedSongs.filter(x => x.Author.toLowerCase() === artist.toLowerCase()).length} bài hát</p>`;
+            card.append(info);
+            songContainer.append(card);
+        });
     }
 
     function applySearch() {
-      const q = librarySearch.value.trim().toLowerCase();
-      if (!q) {
-        if (currentMode === 'song') renderSongCards(window.likedSongs);
-        else renderArtistCards(likedArtists);
-        return;
-      }
-
-      if (currentMode === 'song') {
-        const filtered = window.likedSongs.filter(item => item.Name.toLowerCase().includes(q) || item.Author.toLowerCase().includes(q) || item.Album.toLowerCase().includes(q));
-        renderSongCards(filtered);
-      } else {
-        const filtered = likedArtists.filter(item => item.toLowerCase().includes(q));
-        renderArtistCards(filtered);
-      }
+        const librarySearch = document.getElementById('librarySearch');
+        if (!librarySearch) return;
+        const q = librarySearch.value.trim().toLowerCase();
+        if (!q) {
+            if (currentMode === 'song') renderSongCards(window.likedSongs);
+            else renderArtistCards(likedArtists);
+            return;
+        }
+        if (currentMode === 'song') {
+            const filtered = window.likedSongs.filter(item => item.Name.toLowerCase().includes(q) || item.Author.toLowerCase().includes(q) || item.Album.toLowerCase().includes(q));
+            renderSongCards(filtered);
+        } else {
+            const filtered = likedArtists.filter(item => item.toLowerCase().includes(q));
+            renderArtistCards(filtered);
+        }
     }
 
-    tabSongs.addEventListener('click', () => {
-      currentMode = 'song';
-      tabSongs.style.background = '#fff';
-      tabSongs.style.color = '#333';
-      tabArtists.style.background = 'rgba(255,255,255,0.2)';
-      tabArtists.style.color = '#fff';
-      applySearch();
-    });
+    function initLibraryPage() {
+        const tabSongs = document.getElementById('tabSongs');
+        const tabArtists = document.getElementById('tabArtists');
+        const librarySearch = document.getElementById('librarySearch');
+        const createPlaylistButton = document.getElementById('createPlaylist');
+        const favoriteBtn = document.getElementById('favoriteBtn');
 
-    tabArtists.addEventListener('click', () => {
-      currentMode = 'artist';
-      tabArtists.style.background = '#fff';
-      tabArtists.style.color = '#333';
-      tabSongs.style.background = 'rgba(255,255,255,0.2)';
-      tabSongs.style.color = '#fff';
-      applySearch();
-    });
+        if (tabSongs) {
+            tabSongs.addEventListener('click', () => {
+                currentMode = 'song';
+                tabSongs.style.background = '#fff';
+                tabSongs.style.color = '#333';
+                tabArtists.style.background = 'rgba(255,255,255,0.2)';
+                tabArtists.style.color = '#fff';
+                renderSongCards(window.likedSongs);
+            });
+        }
 
-    librarySearch.addEventListener('input', applySearch);
+        if (tabArtists) {
+            tabArtists.addEventListener('click', () => {
+                currentMode = 'artist';
+                tabArtists.style.background = '#fff';
+                tabArtists.style.color = '#333';
+                tabSongs.style.background = 'rgba(255,255,255,0.2)';
+                tabSongs.style.color = '#fff';
+                renderArtistCards(likedArtists);
+            });
+        }
 
-    closePopupPlayer?.addEventListener('click', stopCurrentSong);
-    playPauseBtn?.addEventListener('click', togglePlayPause);
-    prevBtn?.addEventListener('click', () => {
-      if (!playlist.length || currentSongIndex < 0) return;
-      const prevIndex = currentSongIndex > 0 ? currentSongIndex - 1 : playlist.length - 1;
-      playSong(playlist[prevIndex]);
-    });
-    nextBtn?.addEventListener('click', () => {
-      if (!playlist.length || currentSongIndex < 0) return;
-      const nextIndex = (currentSongIndex + 1) % playlist.length;
-      playSong(playlist[nextIndex]);
-    });
+        if (librarySearch) {
+            librarySearch.addEventListener('input', applySearch);
+        }
 
-    volumeRange?.addEventListener('input', (e) => {
-      if (!currentAudio) return;
-      const vol = Math.min(1, Math.max(0, e.target.value / 100));
-      currentAudio.volume = vol;
-      if (volumeIcon?.querySelector('i')) {
-        const icon = volumeIcon.querySelector('i');
-        icon.className = vol === 0 ? 'fas fa-volume-mute' : (vol < 0.35 ? 'fas fa-volume-low' : (vol < 0.8 ? 'fas fa-volume' : 'fas fa-volume-high'));
-      }
-    });
+        if (createPlaylistButton) {
+            createPlaylistButton.addEventListener('click', () => {
+                alert('Chức năng tạo playlist đang còn đang phát triển.');
+            });
+        }
 
-    durationBar?.addEventListener('click', seekToPosition);
 
-    // Initialize with artists tab active
-    currentMode = 'song';
-    tabSongs.style.background = '#fff';
-    tabSongs.style.color = '#333';
-    tabArtists.style.background = 'rgba(255,255,255,0.2)';
-    tabArtists.style.color = '#fff';
+        renderSongCards(window.likedSongs);
+    }
 
-    librarySearch.addEventListener('input', applySearch);
-
-    document.getElementById('createPlaylist').addEventListener('click', () => {
-        alert('Chức năng tạo playlist đang còn đang phát triển.');
-    });
-
-    renderSongCards(window.likedSongs);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLibraryPage);
+    } else {
+        initLibraryPage();
+    }
 </script>
 }

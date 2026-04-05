@@ -147,7 +147,8 @@ namespace ServerWeb.Controllers
                 likedSongs = _dbContext.PlaylistSongs
                     .Where(ps => ps.PlaylistId == likedPlaylist.Id)
                     .Include(ps => ps.Song)
-                    .Select(ps => ps.Song)
+                    .GroupBy(ps => ps.SongId)
+                    .Select(g => g.First().Song)
                     .ToList();
             }
             ViewBag.LikedSongs = likedSongs;
@@ -231,12 +232,15 @@ namespace ServerWeb.Controllers
                 _dbContext.SaveChanges();
             }
 
-            var existing = _dbContext.PlaylistSongs.FirstOrDefault(ps => ps.PlaylistId == likedPlaylist.Id && ps.SongId == songId);
-            if (existing != null)
+            var existingEntries = _dbContext.PlaylistSongs
+                .Where(ps => ps.PlaylistId == likedPlaylist.Id && ps.SongId == songId)
+                .ToList();
+
+            if (existingEntries.Any())
             {
                 // Unlike
                 System.Diagnostics.Debug.WriteLine("Unliking song");
-                _dbContext.PlaylistSongs.Remove(existing);
+                _dbContext.PlaylistSongs.RemoveRange(existingEntries);
                 _dbContext.SaveChanges();
                 return Json(new { success = true, liked = false, message = "Song unliked" });
             }
