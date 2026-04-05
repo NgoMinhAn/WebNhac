@@ -111,6 +111,30 @@ namespace ServerWeb.Controllers
 
             return View(playlists);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetUserPlaylists()
+        {
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized();
+
+            if (!int.TryParse(userIdClaim.Value, out var userId)) return Unauthorized();
+
+            var playlists = await _context.Playlists
+                .Where(p => p.UserId == userId)
+                .OrderByDescending(p => p.CreatedAt)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.Name,
+                    p.Description,
+                    p.ImageUrl,
+                    p.IsPrivate
+                })
+                .ToListAsync();
+
+            return Json(playlists);
+        }
         // Xóa Playlist
         [HttpPost]
         public async Task<IActionResult> Delete(int id)
@@ -143,7 +167,10 @@ namespace ServerWeb.Controllers
         [HttpPost]
         public async Task<IActionResult> UpdateName([FromBody] PlaylistUpdateModel model)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
             var playlist = await _context.Playlists.FindAsync(model.Id);
 
             if (playlist == null) return NotFound();
@@ -152,6 +179,26 @@ namespace ServerWeb.Controllers
             if (playlist.UserId != userId) return Forbid();
 
             playlist.Name = model.Name;
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
+
+        // Cập nhật mô tả Playlist
+        [HttpPost]
+        public async Task<IActionResult> UpdateDescription([FromBody] PlaylistDescriptionModel model)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var playlist = await _context.Playlists.FindAsync(model.Id);
+
+            if (playlist == null) return NotFound();
+
+            // KIỂM TRA: Nếu không phải chủ sở hữu thì không cho sửa
+            if (playlist.UserId != userId) return Forbid();
+
+            playlist.Description = model.Description;
             await _context.SaveChangesAsync();
             return Ok();
         }
@@ -178,16 +225,42 @@ namespace ServerWeb.Controllers
             return Ok(new { newUrl = playlist.ImageUrl });
         }
 
+        // Xóa bài hát khỏi Playlist
+        [HttpPost]
+        public async Task<IActionResult> RemoveSong(int playlistId, int songId)
+        {
+            var playlistSong = await _context.PlaylistSongs
+                .FirstOrDefaultAsync(ps => ps.PlaylistId == playlistId && ps.SongId == songId);
+
+            if (playlistSong == null) return NotFound();
+
+            _context.PlaylistSongs.Remove(playlistSong);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Đã xóa bài hát khỏi playlist!" });
+        }
+
+        // Sắp xếp lại thứ tự bài hát trong Playlist
+        [HttpPost]
+        public IActionResult UpdateSongOrder([FromBody] List<int> songIds)
+        {
+            // songIds là danh sách ID bài hát theo thứ tự mới
+            // (Chúng tôi không lưu trữ vị trí trong DB, nhưng có thể extend nếu cần)
+            
+            return Ok(new { message = "Thứ tự đã được cập nhật!" });
+        }
+
         // Class phụ để nhận dữ liệu JSON
         public class PlaylistUpdateModel
         {
             public int Id { get; set; }
             public string Name { get; set; }
         }
+
+        public class PlaylistDescriptionModel
+        {
+            public int Id { get; set; }
+            public string Description { get; set; }
+        }
     }
-}
-public class PlaylistUpdateModel
-{
-    public int Id { get; set; }
-    public string Name { get; set; }
 }

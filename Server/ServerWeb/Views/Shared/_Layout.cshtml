@@ -60,10 +60,13 @@
             <nav class="top-navbar">
                 <div class="nav-breadcrumb">Trang chủ</div>
                 <div class="search-container">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" placeholder="Tìm kiếm nội dung">
-                    </div>
+                    <form action="/Home/Search" method="get" style="display:flex; width:100%">
+                        <div class="search-box" style="flex:1">
+                            <i class="fas fa-search"></i>
+                            <input name="query" type="text" placeholder="Tìm kiếm nội dung" value="@(Context.Request.Query["query"].ToString())">
+                        </div>
+                        <input type="hidden" name="genre" value="@(Context.Request.Query["genre"].ToString())">
+                    </form>
                 </div>
                 <div class="auth-buttons">
                     @if (User.Identity != null && User.Identity.IsAuthenticated)
@@ -447,6 +450,114 @@
                 currentPlaylistIds = currentPlaylistIds.sort(() => Math.random() - 0.5);
                 currentSongIndex = currentPlaylistIds.indexOf(Number(currentSongId));
             });
+        }
+
+        function showUserPlaylists(event) {
+            event.preventDefault();
+            const dropdown = document.getElementById('playlistDropdown');
+            const arrow = document.getElementById('playlistArrow');
+
+            if (dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+                arrow.classList.remove('open');
+                return;
+            }
+
+            if (dropdown.childElementCount > 0) {
+                dropdown.style.display = 'block';
+                arrow.classList.add('open');
+                return;
+            }
+
+            fetch('/Playlist/GetUserPlaylists')
+                .then(res => {
+                    if (!res.ok) throw new Error('Không thể tải playlist');
+                    return res.json();
+                })
+                .then(playlists => {
+                    dropdown.innerHTML = '';
+                    if (!playlists.length) {
+                        dropdown.innerHTML = '<li>Chưa có playlist nào</li>';
+                    } else {
+                        playlists.forEach(playlist => {
+                            const li = document.createElement('li');
+                            const row = document.createElement('div');
+                            row.className = 'playlist-list-item';
+
+                            const container = document.createElement('div');
+                            const anchor = document.createElement('a');
+                            anchor.href = `/Playlist/Details/${playlist.id}`;
+                            anchor.textContent = playlist.name;
+                            anchor.title = playlist.description || '';
+                            anchor.style.flex = '1';
+                            container.appendChild(anchor);
+
+                            if (playlist.description) {
+                                const desc = document.createElement('small');
+                                desc.textContent = playlist.description;
+                                container.appendChild(desc);
+                            }
+
+                            const deleteBtn = document.createElement('button');
+                            deleteBtn.type = 'button';
+                            deleteBtn.className = 'playlist-delete-btn';
+                            deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                            deleteBtn.onclick = function (event) {
+                                event.stopPropagation();
+                                event.preventDefault();
+                                deletePlaylistFromSidebar(playlist.id, li);
+                            };
+
+                            row.appendChild(container);
+                            row.appendChild(deleteBtn);
+                            li.appendChild(row);
+                            dropdown.appendChild(li);
+                        });
+                    }
+                    dropdown.style.display = 'block';
+                    arrow.classList.add('open');
+                })
+                .catch(err => {
+                    console.error(err);
+                    dropdown.innerHTML = '<li>Không tải được playlist. Hãy thử lại.</li>';
+                    dropdown.style.display = 'block';
+                    arrow.classList.add('open');
+                });
+        }
+
+        document.addEventListener('click', function (event) {
+            const dropdown = document.getElementById('playlistDropdown');
+            const playItem = event.target.closest('.playlist-menu-item');
+
+            if (!playItem && dropdown && dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+                document.getElementById('playlistArrow').classList.remove('open');
+            }
+        });
+
+        async function deletePlaylistFromSidebar(playlistId, listItem) {
+            if (!confirm('Bạn có chắc muốn xóa playlist này?')) return;
+
+            try {
+                const response = await fetch(`/Playlist/Delete/${playlistId}`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    alert('Xóa playlist thất bại. Vui lòng thử lại.');
+                    return;
+                }
+
+                listItem.remove();
+                const dropdown = document.getElementById('playlistDropdown');
+
+                if (dropdown.childElementCount === 0) {
+                    dropdown.innerHTML = '<li>Chưa có playlist nào</li>';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Có lỗi xảy ra khi xóa playlist.');
+            }
         }
 
         // --- LOGIC AUTH ---

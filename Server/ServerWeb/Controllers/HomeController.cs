@@ -40,6 +40,93 @@ namespace ServerWeb.Controllers
         public IActionResult Discovery()
         {
             var songs = _dbContext.Songs.OrderByDescending(s => s.Id).ToList();
+            ViewBag.Genres = _dbContext.Songs
+                .Where(s => !string.IsNullOrWhiteSpace(s.Genre))
+                .Select(s => s.Genre)
+                .Distinct()
+                .OrderBy(g => g)
+                .ToList();
+            ViewBag.TopArtists = _dbContext.Songs
+                .Where(s => !string.IsNullOrWhiteSpace(s.Author))
+                .Select(s => s.Author)
+                .Distinct()
+                .OrderBy(a => a)
+                .Take(12)
+                .ToList();
+            ViewBag.SearchQuery = string.Empty;
+            ViewBag.SelectedGenre = string.Empty;
+            ViewBag.PageTitle = "Khám phá";
+            return View(songs);
+        }
+
+        public IActionResult Search(string query, string genre)
+        {
+            var songsQuery = _dbContext.Songs.AsQueryable();
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                var lower = query.Trim().ToLower();
+                songsQuery = songsQuery.Where(s =>
+                    (!string.IsNullOrEmpty(s.Name) && s.Name.ToLower().Contains(lower)) ||
+                    (!string.IsNullOrEmpty(s.Author) && s.Author.ToLower().Contains(lower)) ||
+                    (!string.IsNullOrEmpty(s.Album) && s.Album.ToLower().Contains(lower)) ||
+                    (!string.IsNullOrEmpty(s.Genre) && s.Genre.ToLower().Contains(lower)));
+            }
+            if (!string.IsNullOrWhiteSpace(genre))
+            {
+                var selectedGenre = genre.Trim();
+                songsQuery = songsQuery.Where(s => s.Genre == selectedGenre);
+            }
+
+            var songs = songsQuery.OrderByDescending(s => s.Id).ToList();
+            ViewBag.Genres = _dbContext.Songs
+                .Where(s => !string.IsNullOrWhiteSpace(s.Genre))
+                .Select(s => s.Genre)
+                .Distinct()
+                .OrderBy(g => g)
+                .ToList();
+            ViewBag.TopArtists = _dbContext.Songs
+                .Where(s => !string.IsNullOrWhiteSpace(s.Author))
+                .GroupBy(s => s.Author)
+                .OrderByDescending(g => g.Count())
+                .Select(g => g.Key)
+                .Take(12)
+                .ToList();
+            ViewBag.SearchQuery = query ?? string.Empty;
+            ViewBag.SelectedGenre = genre ?? string.Empty;
+            ViewBag.PageTitle = string.IsNullOrWhiteSpace(query) && string.IsNullOrWhiteSpace(genre) ? "Khám phá" : "Kết quả tìm kiếm";
+            return View("Discovery", songs);
+        }
+
+        public IActionResult Artist(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return RedirectToAction("Discovery");
+
+            var artistName = name.Trim();
+            var songs = _dbContext.Songs
+                .Where(s => s.Author == artistName)
+                .OrderByDescending(s => s.Id)
+                .ToList();
+
+            if (!songs.Any()) return NotFound();
+
+            ViewBag.ArtistName = artistName;
+            ViewBag.ArtistSongCount = songs.Count;
+            ViewBag.Genres = _dbContext.Songs
+                .Where(s => !string.IsNullOrWhiteSpace(s.Genre))
+                .Select(s => s.Genre)
+                .Distinct()
+                .OrderBy(g => g)
+                .ToList();
+            ViewBag.TopArtists = _dbContext.Songs
+                .Where(s => !string.IsNullOrWhiteSpace(s.Author))
+                .GroupBy(s => s.Author)
+                .OrderByDescending(g => g.Count())
+                .Select(g => g.Key)
+                .Take(12)
+                .ToList();
+            ViewBag.SearchQuery = string.Empty;
+            ViewBag.SelectedGenre = string.Empty;
+            ViewBag.PageTitle = $"Nghệ sĩ: {artistName}";
             return View(songs);
         }
 

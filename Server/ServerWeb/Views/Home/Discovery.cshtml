@@ -1,12 +1,59 @@
 ﻿@model IEnumerable<ServerWeb.Models.Song>
 
 @{
-    ViewData["Title"] = "Khám phá";
+    ViewData["Title"] = ViewBag.PageTitle ?? "Khám phá";
+    var searchQuery = ViewBag.SearchQuery as string ?? string.Empty;
+    var selectedGenre = ViewBag.SelectedGenre as string ?? string.Empty;
+    var genres = ViewBag.Genres as List<string> ?? new List<string>();
+    var topArtists = ViewBag.TopArtists as List<string> ?? new List<string>();
 }
 
 <div class="container">
-    <h1>Khám phá bài hát mới</h1>
-    <p>Danh sách các bài hát mới nhất vừa được đăng tải.</p>
+    <div class="discovery-header">
+        <div class="discovery-text">
+            <h1>@ViewData["Title"]</h1>
+            <p>Khám phá bài hát theo tìm kiếm, thể loại hoặc nghệ sĩ. Duyệt các đề xuất và nghệ sĩ nổi bật.</p>
+        </div>
+        <div class="discovery-filters">
+            <form action="/Home/Search" method="get" class="discovery-search-form">
+                <input type="text" name="query" value="@searchQuery" placeholder="Tìm kiếm tên bài, nghệ sĩ, album, thể loại" />
+                <select name="genre" onchange="this.form.submit()">
+                    <option value="">Tất cả thể loại</option>
+                    @foreach (var genre in genres)
+                    {
+                        if (genre == selectedGenre)
+                        {
+                            <option value="@genre" selected>@genre</option>
+                        }
+                        else
+                        {
+                            <option value="@genre">@genre</option>
+                        }
+                    }
+                </select>
+                <button type="submit">Tìm</button>
+            </form>
+
+            <div class="artist-suggestions">
+                <h3>Nghệ sĩ nổi bật</h3>
+                <div class="artist-tags">
+                    @foreach (var artist in topArtists)
+                    {
+                        <a class="artist-tag" href="@Url.Action("Artist", "Home", new { name = artist })">@artist</a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(searchQuery) || !string.IsNullOrWhiteSpace(selectedGenre))
+    {
+        <div class="discovery-summary">
+            <span>@Model.Count() kết quả</span>
+            @if (!string.IsNullOrWhiteSpace(searchQuery)) { <span>Tìm kiếm: "@searchQuery"</span> }
+            @if (!string.IsNullOrWhiteSpace(selectedGenre)) { <span>Thể loại: "@selectedGenre"</span> }
+        </div>
+    }
 
     <div class="row">
         @foreach (var song in Model)

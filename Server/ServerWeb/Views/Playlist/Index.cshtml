@@ -23,6 +23,20 @@
                         </button>
                     </div>
                     <p>Playlist • @User.Identity.Name</p>
+                    @if (!string.IsNullOrEmpty(item.Description))
+                    {
+                        <p style="font-size: 12px; color: #b3b3b3; margin-top: 5px; font-style: italic;">@item.Description</p>
+                    }
+                    <p style="font-size: 12px; color: #888888; margin-top: 5px;">
+                        @if (item.IsPrivate)
+                        {
+                            <i class="fas fa-lock"></i> <span>Riêng tư</span>
+                        }
+                        else
+                        {
+                            <i class="fas fa-globe"></i> <span>Công khai</span>
+                        }
+                    </p>
                 </div>
             </div>
         }
