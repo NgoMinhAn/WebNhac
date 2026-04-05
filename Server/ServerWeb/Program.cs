@@ -13,7 +13,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     .AddCookie(options =>
     {
         options.LoginPath = "/Auth/Login"; // Đường dẫn nếu chưa đăng nhập
-        options.AccessDeniedPath = "/Auth/AccessDenied";
+        options.AccessDeniedPath = "/Home/AccessDenied";
         options.Cookie.Name = "MusicApp_Auth"; // Tên Cookie lưu trên máy khách
         options.ExpireTimeSpan = TimeSpan.FromDays(7); // Ghi nhớ trong 7 ngày
     });
