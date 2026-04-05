@@ -321,9 +321,13 @@ namespace ServerWeb.Controllers
             return Json(new { success = true, message = "Cập nhật thành công.", song = new { song.Id, song.Name, song.Author, song.Album, song.Genre, duration = song.Duration.ToString(@"mm\:ss"), song.CoverPath } });
         }
 
+        // --- CÁC HÀM XỬ LÝ UPLOAD BÀI HÁT (CHỈ ADMIN) ---
+
+        [Authorize(Roles = "Admin")] // Chặn User thường vào xem giao diện upload
         [HttpGet]
         public IActionResult UploadSong() => View();
 
+        [Authorize(Roles = "Admin")] // Chặn User thường cố tình gửi file qua API/Postman
         [HttpPost]
         public async Task<IActionResult> UploadSong(string name, string author, string album, string genre, IFormFile file, IFormFile? coverFile, string? duration)
         {
@@ -477,6 +481,11 @@ namespace ServerWeb.Controllers
                 if (System.IO.File.Exists(fullPath)) System.IO.File.Delete(fullPath);
             }
             catch { }
+        }
+
+        public IActionResult AccessDenied()
+        {
+            return View();
         }
 
         public IActionResult Privacy() => View();
