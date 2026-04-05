@@ -138,7 +138,7 @@
 
     <div id="authModal" class="auth-overlay" onclick="closeAuth(event)">
         <div class="auth-card" onclick="event.stopPropagation()">
-            <span class="close-player" style="top:10px; right:15px" onclick="closeAuth(null)">&times;</span>
+            <span class="close-x" onclick="closeAuth(null)">&times;</span>
             <div id="authContent"></div>
         </div>
     </div>
@@ -567,22 +567,55 @@
             const modal = document.getElementById('authModal');
             const content = document.getElementById('authContent');
             modal.style.display = 'flex';
+
             if (type === 'login') {
                 content.innerHTML = `
-                    <h2 style="text-align:center; margin-bottom:20px">Đăng nhập</h2>
+                    <div class="auth-title">Đăng nhập</div>
+                    <div class="auth-subtitle">Đăng nhập để tiếp tục khám phá và lưu nhạc yêu thích.</div>
                     <form onsubmit="handleAuthSubmit(event, 'login')" action="/Auth/Login" method="post">
-                        <div style="margin-bottom:15px">
-                            <label style="display:block;margin-bottom:5px">Email/Username</label>
-                            <input type="text" name="Email" style="width:100%;padding:10px;border-radius:5px;border:none" required>
+                        <div class="auth-field">
+                            <label>Email / Username</label>
+                            <input type="text" name="Email" placeholder="Nhập email hoặc tên người dùng" required>
                         </div>
-                        <div style="margin-bottom:20px">
-                            <label style="display:block;margin-bottom:5px">Mật khẩu</label>
-                            <input type="password" name="Password" style="width:100%;padding:10px;border-radius:5px;border:none" required>
+                        <div class="auth-field">
+                            <label>Mật khẩu</label>
+                            <input type="password" name="Password" placeholder="Nhập mật khẩu" required>
                         </div>
-                        <button type="submit" style="width:100%;padding:12px;background:#1ed760;border:none;border-radius:25px;font-weight:700;cursor:pointer">Đăng nhập</button>
-                    </form>`;
+                        <button type="submit" class="btn-continue">Đăng nhập</button>
+                    </form>
+                    <div class="auth-or">Hoặc</div>
+                    <button type="button" class="btn-social btn-phone"><i class="fas fa-mobile-alt"></i> Đăng nhập bằng số điện thoại</button>
+                    <button type="button" class="btn-social btn-fb"><i class="fab fa-facebook"></i> Đăng nhập bằng Facebook</button>
+                    <div class="auth-footer">Chưa có tài khoản? <a href="#" onclick="openAuth('register'); return false;">Đăng ký ngay</a></div>
+                `;
             } else {
-                content.innerHTML = `<h2 style="text-align:center">Đăng ký</h2><p style="text-align:center">Tính năng đang cập nhật...</p>`;
+                content.innerHTML = `
+                    <div class="auth-title">Đăng ký</div>
+                    <div class="auth-subtitle">Tạo tài khoản mới và bắt đầu nghe nhạc theo phong cách của bạn.</div>
+                    <form onsubmit="handleAuthSubmit(event, 'register')" action="/Auth/Register" method="post">
+                        <div class="auth-field">
+                            <label>E-mail</label>
+                            <input type="email" name="Email" placeholder="vd: name@domain.com" required>
+                        </div>
+                        <div class="auth-field">
+                            <label>Tên đăng nhập</label>
+                            <input type="text" name="Username" placeholder="Tên hiển thị của bạn" required>
+                        </div>
+                        <div class="auth-field">
+                            <label>Mật khẩu</label>
+                            <input type="password" name="Password" placeholder="Nhập mật khẩu" required>
+                        </div>
+                        <div class="auth-field">
+                            <label>Xác nhận mật khẩu</label>
+                            <input type="password" name="ConfirmPassword" placeholder="Nhập lại mật khẩu" required>
+                        </div>
+                        <button type="submit" class="btn-continue">Đăng ký</button>
+                    </form>
+                    <div class="auth-or">Hoặc</div>
+                    <button type="button" class="btn-social btn-phone"><i class="fas fa-mobile-alt"></i> Đăng ký bằng số điện thoại</button>
+                    <button type="button" class="btn-social btn-fb"><i class="fab fa-facebook"></i> Đăng ký bằng Facebook</button>
+                    <div class="auth-footer">Bạn đã có tài khoản? <a href="#" onclick="openAuth('login'); return false;">Đăng nhập ngay</a></div>
+                `;
             }
         }
 
