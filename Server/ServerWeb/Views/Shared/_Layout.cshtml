@@ -290,7 +290,8 @@
                     Genre: song.genre || 'Âm nhạc',
                     Duration: song.duration,
                     FilePath: song.audioUrl,
-                    CoverPath: song.imageUrl
+                    CoverPath: song.imageUrl,
+                    Liked: Boolean(song.liked)
                 }));
         }
 
@@ -319,12 +320,13 @@
             });
 
             updatePlayerDisplay(song);
+            updateFavoriteIcon(Boolean(song.Liked));
         }
 
         function playSongFromCard(card) {
-            const song = getSongFromCard(card);
-            if (!song) return;
-            playSong(song);
+            const songId = Number(card.dataset.songId);
+            if (!songId) return;
+            openPlayer(songId);
         }
 
         function openPlayer(songId, playlist = null) {

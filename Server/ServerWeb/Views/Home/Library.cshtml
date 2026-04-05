@@ -107,16 +107,9 @@
     });
 
     function playSongFromCard(card) {
-        const song = {
-            Id: Number(card.dataset.songId),
-            Name: card.dataset.songName,
-            Author: card.dataset.songAuthor,
-            Album: card.dataset.songAlbum || '',
-            Genre: card.dataset.songGenre || '',
-            FilePath: card.dataset.filePath,
-            CoverPath: card.dataset.coverPath || ''
-        };
-        playSong(song);
+        const songId = Number(card.dataset.songId);
+        if (!songId) return;
+        openPlayer(songId);
     }
 
     function renderSongCards(list) {
