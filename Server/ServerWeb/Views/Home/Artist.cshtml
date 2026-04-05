@@ -6,28 +6,227 @@
     var songCount = ViewBag.ArtistSongCount as int? ?? Model.Count();
 }
 
-<div class="container">
-    <div class="discovery-header">
-        <div class="discovery-text">
+<div class="playlist-page">
+    <div class="playlist-header">
+        <div class="playlist-cover">
+            <i class="fas fa-user-music"></i>
+        </div>
+
+        <div class="playlist-info">
+            <span class="sub-title">NGHỆ SĨ</span>
             <h1>@artistName</h1>
-            <p>@songCount bài hát có sẵn. Khám phá những ca khúc mới nhất và nghe ngay.</p>
-            <a class="btn btn-secondary" href="/Home/Discovery">Quay lại Khám phá</a>
+
+            <div class="playlist-meta">
+                <span id="songCountDisplay">@songCount bài hát</span>
+            </div>
         </div>
     </div>
 
-    <div class="row mt-4">
-        @foreach (var song in Model)
-        {
-            <div class="col-md-3">
-                <div class="card mb-4">
-                    <img src="@song.CoverPath" class="card-img-top" alt="@song.Name">
-                    <div class="card-body">
-                        <h5 class="card-title">@song.Name</h5>
-                        <p class="card-text">@song.Author</p>
-                        <button class="btn btn-primary play-btn" data-id="@song.Id">Nghe ngay</button>
-                    </div>
-                </div>
-            </div>
-        }
+    <div class="playlist-body">
+        <div class="action-bar">
+            <button class="btn-play-all" onclick="playAllSongs()">
+                <i class="fas fa-play"></i> PHÁT TẤT CẢ
+            </button>
+        </div>
+
+        <table class="song-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px">#</th>
+                    <th>TIÊU ĐỀ</th>
+                    <th>NGHỆ SĨ</th>
+                    <th>ALBUM</th>
+                    <th style="text-align: right; padding-right: 20px;"><i class="far fa-clock"></i></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    var index = 1;
+                    foreach (var song in Model)
+                    {
+                        <tr class="song-row" data-song-id="@song.Id" style="cursor: pointer;">
+                            <td>@(index++)</td>
+                            <td>
+                                <div class="song-title-cell">
+                                    <span>@song.Name</span>
+                                </div>
+                            </td>
+                            <td>@song.Author</td>
+                            <td>@song.Album</td>
+                            <td style="text-align: right; padding-right: 20px;">@(song.Duration.TotalHours >= 1 ? song.Duration.ToString(@"h\:mm\:ss") : song.Duration.ToString(@"mm\:ss"))</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" style="text-align:center; padding: 40px; color: #b3b3b3;">
+                            Không có bài hát nào.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
 </div>
+
+<style>
+    .playlist-page {
+        padding: 30px;
+        background: linear-gradient(180deg, #2d125c 0%, #09030e 60%, #050106 100%);
+        min-height: 100vh;
+        color: #f7f3ff;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .playlist-header {
+        display: flex;
+        gap: 24px;
+        align-items: flex-end;
+        padding-bottom: 30px;
+    }
+
+    .playlist-cover {
+        width: 232px;
+        height: 232px;
+        background: linear-gradient(135deg, #4423a6, #8a4dff);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 80px;
+        box-shadow: 0 24px 80px rgba(90, 54, 160, 0.35);
+        border-radius: 28px;
+    }
+
+    .playlist-info .sub-title {
+        display: inline-block;
+        font-size: 14px;
+        letter-spacing: 0.14em;
+        color: #d8c9ff;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+    }
+
+    .playlist-info h1 {
+        font-size: 72px;
+        margin: 8px 0;
+        font-weight: 900;
+        color: #ffffff;
+    }
+
+    .playlist-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 16px;
+        color: #b3b3b3;
+        margin-top: 8px;
+    }
+
+    .playlist-body {
+        margin-top: 20px;
+    }
+
+    .action-bar {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .btn-play-all {
+        background: #1db954;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 24px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background 0.2s;
+    }
+
+    .btn-play-all:hover {
+        background: #1ed760;
+    }
+
+    .song-table {
+        width: 100%;
+        border-collapse: collapse;
+        color: #f7f3ff;
+    }
+
+    .song-table th {
+        text-align: left;
+        padding: 8px 16px;
+        font-size: 14px;
+        font-weight: 400;
+        color: #b3b3b3;
+        border-bottom: 1px solid #333;
+    }
+
+    .song-table td {
+        padding: 8px 16px;
+        border-bottom: 1px solid #333;
+        vertical-align: middle;
+    }
+
+    .song-row:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .song-title-cell {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof openPlayer !== "function") {
+            console.error('openPlayer function not available in Artist page');
+            return;
+        }
+
+        function getArtistPlaylistIds() {
+            const songRows = document.querySelectorAll('.song-row');
+            return Array.from(songRows)
+                .map(item => item.getAttribute('data-song-id'))
+                .filter(Boolean)
+                .map(id => parseInt(id, 10));
+        }
+
+        function playArtistSong(row) {
+            const songId = row?.getAttribute('data-song-id');
+            if (!songId) {
+                console.error('No songId found on clicked row');
+                return;
+            }
+
+            const playlistIds = getArtistPlaylistIds();
+            console.log('Artist page: playing song', songId, 'with playlist', playlistIds);
+            openPlayer(parseInt(songId, 10), playlistIds);
+        }
+
+        document.querySelectorAll('.song-row').forEach(row => {
+            row.addEventListener('click', function() {
+                playArtistSong(this);
+            });
+        });
+
+        window.playAllSongs = function() {
+            const playlistIds = getArtistPlaylistIds();
+            if (playlistIds.length === 0) {
+                console.error('No songs found to play');
+                return;
+            }
+
+            console.log('Artist page: playing all songs', playlistIds);
+            openPlayer(playlistIds[0], playlistIds);
+        };
+    });
+</script>
