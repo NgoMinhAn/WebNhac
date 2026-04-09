@@ -196,8 +196,7 @@
             const songRows = document.querySelectorAll('.song-row');
             return Array.from(songRows)
                 .map(item => item.getAttribute('data-song-id'))
-                .filter(Boolean)
-                .map(id => parseInt(id, 10));
+                .filter(Boolean); // Keep as strings - MongoDB ObjectIds
         }
 
         function playArtistSong(row) {
@@ -209,7 +208,7 @@
 
             const playlistIds = getArtistPlaylistIds();
             console.log('Artist page: playing song', songId, 'with playlist', playlistIds);
-            openPlayer(parseInt(songId, 10), playlistIds);
+            openPlayer(songId, playlistIds); // Keep as string
         }
 
         document.querySelectorAll('.song-row').forEach(row => {
@@ -226,7 +225,7 @@
             }
 
             console.log('Artist page: playing all songs', playlistIds);
-            openPlayer(playlistIds[0], playlistIds);
+            openPlayer(playlistIds[0], playlistIds); // Keep as string
         };
     });
 </script>

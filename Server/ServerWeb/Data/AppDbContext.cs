@@ -1,31 +1,20 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using MongoDB.Driver;
 using ServerWeb.Models;
 
 namespace ServerWeb.Data
 {
-    public class AppDbContext : DbContext
+    public class AppDbContext
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+        private readonly IMongoDatabase _database;
 
-        public DbSet<Song> Songs { get; set; }
-        public DbSet<User> Users { get; set; }
-        public DbSet<Playlist> Playlists { get; set; }
-        public DbSet<PlaylistSong> PlaylistSongs { get; set; }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        public AppDbContext(IMongoDatabase database)
         {
-            base.OnModelCreating(modelBuilder);
-
-            // Chỉ giữ lại cấu hình cho Playlist và PlaylistSong
-            modelBuilder.Entity<PlaylistSong>()
-                .HasOne(ps => ps.Playlist)
-                .WithMany(p => p.PlaylistSongs)
-                .HasForeignKey(ps => ps.PlaylistId);
-
-            modelBuilder.Entity<PlaylistSong>()
-                .HasOne(ps => ps.Song)
-                .WithMany()
-                .HasForeignKey(ps => ps.SongId);
+            _database = database;
         }
+
+        public IMongoCollection<Song> Songs => _database.GetCollection<Song>("songs");
+        public IMongoCollection<User> Users => _database.GetCollection<User>("users");
+        public IMongoCollection<Playlist> Playlists => _database.GetCollection<Playlist>("playlists");
+        public IMongoCollection<PlaylistSong> PlaylistSongs => _database.GetCollection<PlaylistSong>("playlistSongs");
     }
 }

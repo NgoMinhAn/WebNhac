@@ -1,24 +1,40 @@
-﻿using Microsoft.EntityFrameworkCore;
-using ServerWeb.Data;
-using Microsoft.AspNetCore.Authentication.Cookies; // Thêm dòng này
+﻿using ServerWeb.Data;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Kết nối Database
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// 1. Connect to MongoDB
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrEmpty(connectionString))
+    throw new InvalidOperationException("Missing connection string 'DefaultConnection'");
 
-// 2. 🔥 CẤU HÌNH XÁC THỰC COOKIE (Khắc phục lỗi InvalidOperationException)
+var mongoClient = new MongoClient(connectionString);
+builder.Services.AddSingleton<IMongoClient>(mongoClient);
+
+builder.Services.AddSingleton(sp => 
+{
+    var client = sp.GetRequiredService<IMongoClient>();
+    return client.GetDatabase("node_auth_test");
+});
+
+builder.Services.AddScoped<AppDbContext>(sp => 
+{
+    var database = sp.GetRequiredService<IMongoDatabase>();
+    return new AppDbContext(database);
+});
+
+// 2. Configure Cookie Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath = "/Auth/Login"; // Đường dẫn nếu chưa đăng nhập
-        options.AccessDeniedPath = "/Home/AccessDenied";
-        options.Cookie.Name = "MusicApp_Auth"; // Tên Cookie lưu trên máy khách
-        options.ExpireTimeSpan = TimeSpan.FromDays(7); // Ghi nhớ trong 7 ngày
+        options.LoginPath = "/Auth/Login";
+        options.AccessDeniedPath = "/Auth/AccessDenied";
+        options.Cookie.Name = "MusicApp_Auth";
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
     });
 
-// 3. Add services to the container.
+// 3. Add services to the container
 builder.Services.AddControllersWithViews();
 
 // 4. Add Session support
@@ -31,7 +47,40 @@ builder.Services.AddSession(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// 5. Initialize MongoDB collections with indexes
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<IMongoDatabase>();
+    
+    // Ensure collections exist and create indexes
+    try
+    {
+        // Users collection
+        var usersCollection = db.GetCollection<ServerWeb.Models.User>("users");
+        var userIndexOptions = new CreateIndexOptions { Unique = true };
+        await usersCollection.Indexes.CreateOneAsync(
+            new CreateIndexModel<ServerWeb.Models.User>(
+                Builders<ServerWeb.Models.User>.IndexKeys.Ascending(u => u.Email),
+                userIndexOptions
+            )
+        );
+
+        // Songs collection
+        var songsCollection = db.GetCollection<ServerWeb.Models.Song>("songs");
+        
+        // Playlists collection  
+        var playlistsCollection = db.GetCollection<ServerWeb.Models.Playlist>("playlists");
+
+        // PlaylistSongs collection
+        var playlistSongsCollection = db.GetCollection<ServerWeb.Models.PlaylistSong>("playlistSongs");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning($"MongoDB initialization warning: {ex.Message}");
+    }
+}
+
+// Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -39,14 +88,14 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles(); // Thay cho MapStaticAssets nếu bạn dùng bản .NET cũ hơn, hoặc giữ nguyên nếu dùng .NET 9
+app.UseStaticFiles();
 
 app.UseRouting();
 
-// 5. THỨ TỰ MIDDLEWARE (Rất quan trọng)
-app.UseSession();         // 1. Session trước
-app.UseAuthentication();  // 2. Authentication (Xác thực) - PHẢI TRƯỚC Authorization
-app.UseAuthorization();   // 3. Authorization (Phân quyền)
+// Configure middleware order (IMPORTANT)
+app.UseSession();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",

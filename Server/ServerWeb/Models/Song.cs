@@ -1,22 +1,26 @@
 using System.ComponentModel.DataAnnotations;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace ServerWeb.Models
 {
     public class Song
     {
-        public int Id { get; set; }
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? Id { get; set; }
 
         [Required]
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         [Required]
-        public string Author { get; set; } 
+        public string? Author { get; set; } 
 
         [Required]
-        public string Album { get; set; }  // Album name
+        public string? Album { get; set; }  // Album name
 
         [Required]
-        public string Genre { get; set; } // Genre of the song
+        public string? Genre { get; set; } // Genre of the song
 
         public string? FilePath { get; set; } // Path to the song file in the Music folder
 

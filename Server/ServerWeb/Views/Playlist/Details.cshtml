@@ -68,10 +68,10 @@
 
     <div class="playlist-body">
         <div class="action-bar">
-            <button class="btn-play-all" onclick="playAllSongs()">
+            <button class="btn-play-all" id="playAllBtn" type="button">
                 <i class="fas fa-play"></i> PHÁT TẤT CẢ
             </button>
-            <button class="btn-add-song" onclick="toggleSearch()">
+            <button class="btn-add-song" id="toggleSearchBtn" type="button">
                 <i class="fas fa-plus"></i> THÊM BÀI HÁT
             </button>
         </div>
@@ -383,46 +383,126 @@
 
 @section Scripts {
     <script>
-        const playlistId = @Model.Id;
+        console.log('=== PLAYLIST DETAILS SCRIPT STARTING ===');
+        
+        const playlistId = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.Id));
+        console.log('playlistId:', playlistId);
 
         function toggleSearch() {
             const section = document.getElementById('searchSection');
             section.style.display = section.style.display === 'none' ? 'block' : 'none';
         }
 
-        // 1. Cập nhật tên Playlist
-        document.getElementById('playlistTitle').addEventListener('blur', async function () {
-            const newName = this.innerText.trim();
-            if (!newName) return;
+        function playAllSongs() {
+            const songRows = document.querySelectorAll('.song-row');
+            const playlistIds = [];
 
-            try {
-                await fetch('/Playlist/UpdateName', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: playlistId, name: newName })
-                });
-            } catch (err) { console.error("Lỗi cập nhật tên:", err); }
-        });
+            songRows.forEach(row => {
+                const id = row.getAttribute('data-song-id');
+                if (id) {
+                    playlistIds.push(id); // Keep as string
+                }
+            });
 
-        // 1b. Cập nhật mô tả Playlist
-        document.getElementById('playlistDescription').addEventListener('blur', async function () {
-            const newDescription = this.innerText.trim();
-            const isPlaceholder = this.querySelector('span');
-            
-            // Nếu là placeholder text, xóa nó
-            if (isPlaceholder) {
-                isPlaceholder.remove();
-                this.innerText = newDescription || '';
+            if (playlistIds.length === 0) {
+                alert("Playlist này chưa có bài hát nào!");
+                return;
             }
 
-            try {
-                await fetch('/Playlist/UpdateDescription', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: playlistId, description: newDescription })
+            if (typeof openPlayer === "function") {
+                openPlayer(playlistIds[0], playlistIds);
+
+                const playerModal = document.getElementById('musicPlayerModal');
+                if (playerModal) playerModal.style.display = 'flex';
+            } else {
+                alert("Hệ thống chưa nạp trình phát nhạc. Hãy kiểm tra lại file Layout hoặc site.js!");
+            }
+        }
+
+        // Initialize button event listeners
+        function initializeButtons() {
+            console.log('initializeButtons called');
+            const toggleSearchBtn = document.getElementById('toggleSearchBtn');
+            const playAllBtn = document.getElementById('playAllBtn');
+
+            console.log('toggleSearchBtn:', toggleSearchBtn);
+            console.log('playAllBtn:', playAllBtn);
+
+            if (toggleSearchBtn) {
+                toggleSearchBtn.addEventListener('click', function() {
+                    console.log('toggleSearchBtn clicked!');
+                    toggleSearch();
                 });
-            } catch (err) { console.error("Lỗi cập nhật mô tả:", err); }
-        });
+                console.log('toggleSearch listener attached');
+            } else {
+                console.error('toggleSearchBtn not found!');
+            }
+            
+            if (playAllBtn) {
+                playAllBtn.addEventListener('click', function() {
+                    console.log('playAllBtn clicked!');
+                    playAllSongs();
+                });
+                console.log('playAllSongs listener attached');
+            } else {
+                console.error('playAllBtn not found!');
+            }
+        }
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeButtons);
+        } else {
+            initializeButtons();
+        }
+
+        // 1. Cập nhật tên Playlist
+        try {
+            const playlistTitle = document.getElementById('playlistTitle');
+            if (playlistTitle) {
+                playlistTitle.addEventListener('blur', async function () {
+                    const newName = this.innerText.trim();
+                    if (!newName) return;
+
+                    try {
+                        await fetch('/Playlist/UpdateName', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: playlistId, name: newName })
+                        });
+                    } catch (err) { console.error("Lỗi cập nhật tên:", err); }
+                });
+            }
+        } catch (err) {
+            console.error('Error setting up playlistTitle listener:', err);
+        }
+
+        // 1b. Cập nhật mô tả Playlist
+        try {
+            const playlistDesc = document.getElementById('playlistDescription');
+            if (playlistDesc) {
+                playlistDesc.addEventListener('blur', async function () {
+                    const newDescription = this.innerText.trim();
+                    const isPlaceholder = this.querySelector('span');
+                    
+                    // Nếu là placeholder text, xóa nó
+                    if (isPlaceholder) {
+                        isPlaceholder.remove();
+                        this.innerText = newDescription || '';
+                    }
+
+                    try {
+                        await fetch('/Playlist/UpdateDescription', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: playlistId, description: newDescription })
+                        });
+                    } catch (err) { console.error("Lỗi cập nhật mô tả:", err); }
+                });
+            }
+        } catch (err) {
+            console.error('Error setting up playlistDescription listener:', err);
+        }
 
         // 2. Upload ảnh bìa
         async function uploadImage(event) {
@@ -453,25 +533,30 @@
 
         // 3. Tìm kiếm bài hát
         async function searchSongs(query) {
+            console.log('searchSongs called with query:', query);
             const resultsDiv = document.getElementById('searchResults');
             if (query.length < 2) { resultsDiv.innerHTML = ''; return; }
 
             try {
-                const response = await fetch(`/Playlist/SearchSongs?query=${encodeURIComponent(query)}`);
+                const url = `/Playlist/SearchSongs?query=${encodeURIComponent(query)}`;
+                console.log('Fetching from:', url);
+                const response = await fetch(url);
                 const songs = await response.json();
+                console.log('Songs returned:', songs);
 
                 let html = '<div style="background: #282828; border-radius: 4px; padding: 10px; margin-top: 10px; max-width: 500px;">';
                 if (songs.length === 0) {
                     html += '<p style="color: #b3b3b3; font-size: 14px; margin:0;">Không tìm thấy kết quả.</p>';
                 } else {
                     songs.forEach(song => {
+                        console.log('Adding song to results:', song);
                         html += `
                                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #3e3e3e;">
                                     <div>
                                         <div style="font-weight: bold; color: white;">${song.name}</div>
                                         <div style="font-size: 12px; color: #b3b3b3;">${song.author}</div>
                                     </div>
-                                    <button onclick="addToList(${song.id})" 
+                                    <button onclick="addToList('${song.id}')" 
                                             style="background: white; border: none; color: black; border-radius: 20px; padding: 5px 15px; cursor: pointer; font-weight:bold; font-size:12px;">
                                         Thêm
                                     </button>
@@ -479,52 +564,46 @@
                     });
                 }
                 html += '</div>';
+                console.log('Setting HTML to resultsDiv, length:', html.length);
                 resultsDiv.innerHTML = html;
-            } catch (err) { console.error(err); }
+                console.log('HTML set successfully');
+            } catch (err) { 
+                console.error('Error in searchSongs:', err); 
+            }
         }
 
         // 4. Thêm bài hát vào danh sách
         async function addToList(songId) {
+            console.log('addToList called with songId:', songId, 'playlistId:', playlistId);
             try {
+                const payload = { playlistId: playlistId, songId: songId };
+                console.log('Sending payload:', payload);
+                
                 const response = await fetch('/Playlist/AddSong', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ playlistId: playlistId, songId: songId })
+                    body: JSON.stringify(payload)
                 });
 
+                console.log('Response status:', response.status, 'ok:', response.ok);
+                
+                const text = await response.text();
+                console.log('Response text:', text);
+                
                 if (response.ok) {
+                    console.log('Success! Reloading page...');
                     location.reload();
                 } else {
-                    const err = await response.json();
-                    alert(err.message || "Không thể thêm bài hát.");
+                    try {
+                        const err = JSON.parse(text);
+                        alert(err.message || "Không thể thêm bài hát.");
+                    } catch (e) {
+                        alert("Error: " + text);
+                    }
                 }
-            } catch (err) { console.error(err); }
-        }
-
-        // 5. Phát tất cả bài hát
-        function playAllSongs() {
-            const songRows = document.querySelectorAll('.song-row');
-            const playlistIds = [];
-
-            songRows.forEach(row => {
-                const id = row.getAttribute('data-song-id');
-                if (id) {
-                    playlistIds.push(parseInt(id));
-                }
-            });
-
-            if (playlistIds.length === 0) {
-                alert("Playlist này chưa có bài hát nào!");
-                return;
-            }
-
-            if (typeof openPlayer === "function") {
-                openPlayer(playlistIds[0], playlistIds);
-
-                const playerModal = document.getElementById('musicPlayerModal');
-                if (playerModal) playerModal.style.display = 'flex';
-            } else {
-                alert("Hệ thống chưa nạp trình phát nhạc. Hãy kiểm tra lại file Layout hoặc site.js!");
+            } catch (err) { 
+                console.error('Caught error:', err);
+                alert("Error: " + err.message);
             }
         }
 
@@ -538,12 +617,12 @@
             songRows.forEach(item => {
                 const id = item.getAttribute('data-song-id');
                 if (id) {
-                    playlistIds.push(parseInt(id));
+                    playlistIds.push(id); // Keep as string
                 }
             });
 
             if (typeof openPlayer === "function") {
-                openPlayer(parseInt(songId), playlistIds);
+                openPlayer(songId, playlistIds); // Keep as string
 
                 const playerModal = document.getElementById('musicPlayerModal');
                 if (playerModal) playerModal.style.display = 'flex';
@@ -619,5 +698,7 @@
                 alert("Có lỗi xảy ra!");
             }
         }
+        
+        console.log('=== PLAYLIST DETAILS SCRIPT FINISHED LOADING ===');
     </script>
 }

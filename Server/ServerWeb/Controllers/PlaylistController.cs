@@ -1,13 +1,15 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using ServerWeb.Data;
 using ServerWeb.Models;
+using ServerWeb.Services;
+using MongoDB.Driver;
+using MongoDB.Bson;
 using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
 
 namespace ServerWeb.Controllers
 {
-    [Authorize] // Chỉ cho phép người đã đăng nhập mới tạo được Playlist
+    [Authorize]
     public class PlaylistController : Controller
     {
         private readonly AppDbContext _context;
@@ -17,250 +19,284 @@ namespace ServerWeb.Controllers
             _context = context;
         }
 
-        // ĐÂY LÀ HÀM BẠN ĐANG THIẾU
         [HttpGet]
         public async Task<IActionResult> Create()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId == null) return Challenge();
+            if (userId == null)
+                return Challenge();
 
-            // Tạo một Playlist mặc định mới
             var newPlaylist = new Playlist
             {
-                Name = "Danh sách phát của tôi #" + (new Random().Next(100, 999)),
-                UserId = int.Parse(userId),
+                Id = ObjectId.GenerateNewId().ToString(),
+                Name = "Danh sách phát được tôi #" + (new Random().Next(100, 999)),
+                UserId = userId,
                 CreatedAt = DateTime.Now
             };
 
-            _context.Playlists.Add(newPlaylist);
-            await _context.SaveChangesAsync();
-
-            // Sau khi tạo xong, chuyển hướng thẳng đến trang chi tiết của nó
+            await _context.Playlists.InsertOneAsync(newPlaylist);
             return RedirectToAction("Details", new { id = newPlaylist.Id });
         }
 
-        // Nhớ đảm bảo có hàm Details để Redirect tới không bị lỗi 404 tiếp
-        public IActionResult Details(int id)
+        public async Task<IActionResult> Details(string id)
         {
-            var playlist = _context.Playlists
-                .Include(p => p.PlaylistSongs)
-                .ThenInclude(ps => ps.Song)
-                .FirstOrDefault(p => p.Id == id);
+            var playlist = await _context.Playlists.FindByIdAsync(id);
+            if (playlist == null)
+                return NotFound();
 
-            if (playlist == null) return NotFound();
+            var filter = Builders<PlaylistSong>.Filter.Eq(ps => ps.PlaylistId, id);
+            var playlistSongs = await _context.PlaylistSongs.Find(filter).ToListAsync();
 
-            playlist.PlaylistSongs = playlist.PlaylistSongs
-                .GroupBy(ps => ps.SongId)
-                .Select(g => g.First())
+            var songIds = playlistSongs
+                .Select(ps => ps.SongId)
+                .Where(songId => !string.IsNullOrWhiteSpace(songId))
+                .Distinct()
                 .ToList();
 
+            if (songIds.Any())
+            {
+                var songsFilter = Builders<Song>.Filter.In(s => s.Id, songIds);
+                var songs = await _context.Songs.Find(songsFilter).ToListAsync();
+                var songMap = songs
+                    .Where(s => !string.IsNullOrWhiteSpace(s.Id))
+                    .ToDictionary(s => s.Id!, s => s);
+
+                foreach (var playlistSong in playlistSongs)
+                {
+                    if (!string.IsNullOrWhiteSpace(playlistSong.SongId) &&
+                        songMap.TryGetValue(playlistSong.SongId, out var song))
+                    {
+                        playlistSong.Song = song;
+                    }
+                }
+            }
+
+            playlist.PlaylistSongs = playlistSongs;
             return View(playlist);
         }
-        // 1. Tìm kiếm bài hát
+
         [HttpGet]
         public async Task<IActionResult> SearchSongs(string query)
         {
-            if (string.IsNullOrWhiteSpace(query)) return Json(new List<object>());
+            if (string.IsNullOrWhiteSpace(query))
+                return Json(Array.Empty<object>());
+
+            var trimmedQuery = query.Trim();
+            var regex = new BsonRegularExpression(trimmedQuery, "i");
+
+            var filter = Builders<Song>.Filter.Or(
+                Builders<Song>.Filter.Regex(s => s.Name, regex),
+                Builders<Song>.Filter.Regex(s => s.Author, regex)
+            );
 
             var songs = await _context.Songs
-                .Where(s => s.Name.Contains(query) || s.Author.Contains(query))
-                .Select(s => new
-                {
-                    Id = s.Id,
-                    Name = s.Name,
-                    Author = s.Author
-                })
-                .Take(5)
+                .Find(filter)
+                .Limit(20)
                 .ToListAsync();
 
-            return Json(songs);
-        }
-
-        // 2. Thêm bài hát vào Playlist
-        [HttpPost]
-        public async Task<IActionResult> AddSong([FromBody] PlaylistSong model)
-        {
-            // model sẽ nhận playlistId và songId từ client
-            var exists = await _context.PlaylistSongs
-                .AnyAsync(ps => ps.PlaylistId == model.PlaylistId && ps.SongId == model.SongId);
-
-            if (!exists)
+            return Json(songs.Select(song => new
             {
-                _context.PlaylistSongs.Add(model);
-                await _context.SaveChangesAsync();
-                return Ok(new { message = "Đã thêm vào playlist!" });
-            }
-
-            return BadRequest(new { message = "Bài hát đã có trong playlist." });
+                id = song.Id,
+                name = song.Name,
+                author = song.Author
+            }));
         }
 
-        [Authorize]
-        public async Task<IActionResult> Index()
+        [HttpPost]
+        public async Task<IActionResult> AddSong([FromBody] PlaylistSongRequest? request, string? playlistId, string? songId)
         {
-            // Lấy ID của người dùng đang đăng nhập
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-            if (userIdClaim == null) return RedirectToAction("Login", "Auth");
+            playlistId ??= request?.PlaylistId;
+            songId ??= request?.SongId;
 
-            int userId = int.Parse(userIdClaim.Value);
+            if (string.IsNullOrWhiteSpace(playlistId) || string.IsNullOrWhiteSpace(songId))
+                return Json(new { success = false, message = "Thiếu thông tin playlist hoặc bài hát" });
 
-            // Lấy danh sách Playlist của User đó
-            var playlists = await _context.Playlists
-                .Where(p => p.UserId == userId)
-                .OrderByDescending(p => p.CreatedAt)
-                .ToListAsync();
+            var playlist = await _context.Playlists.FindByIdAsync(playlistId);
+            if (playlist == null)
+                return Json(new { success = false, message = "Playlist không tồn tại" });
 
-            return View(playlists);
+            var song = await _context.Songs.FindByIdAsync(songId);
+            if (song == null)
+                return Json(new { success = false, message = "Bài hát không tồn tại" });
+
+            var filter = Builders<PlaylistSong>.Filter.And(
+                Builders<PlaylistSong>.Filter.Eq(ps => ps.PlaylistId, playlistId),
+                Builders<PlaylistSong>.Filter.Eq(ps => ps.SongId, songId)
+            );
+
+            var existingSong = await _context.PlaylistSongs.Find(filter).FirstOrDefaultAsync();
+            if (existingSong != null)
+                return Json(new { success = false, message = "Bài hát đã có trong playlist" });
+
+            var playlistSong = new PlaylistSong
+            {
+                Id = ObjectId.GenerateNewId().ToString(),
+                PlaylistId = playlistId,
+                SongId = songId,
+                AddedAt = DateTime.Now
+            };
+
+            await _context.PlaylistSongs.InsertOneAsync(playlistSong);
+
+            return Json(new { success = true, message = "Thêm bài hát thành công" });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> RemoveSong(string playlistId, string songId)
+        {
+            var playlist = await _context.Playlists.FindByIdAsync(playlistId);
+            if (playlist == null)
+                return Json(new { success = false, message = "Playlist không tồn tại" });
+
+            var filter = Builders<PlaylistSong>.Filter.And(
+                Builders<PlaylistSong>.Filter.Eq(ps => ps.PlaylistId, playlistId),
+                Builders<PlaylistSong>.Filter.Eq(ps => ps.SongId, songId)
+            );
+
+            var result = await _context.PlaylistSongs.DeleteOneAsync(filter);
+            if (result.DeletedCount == 0)
+                return Json(new { success = false, message = "Bài hát không có trong playlist" });
+
+            return Json(new { success = true, message = "Xóa bài hát thành công" });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateName(string playlistId, string newName)
+        {
+            if (string.IsNullOrWhiteSpace(newName))
+                return Json(new { success = false, message = "Tên playlist không được trống" });
+
+            var playlist = await _context.Playlists.FindByIdAsync(playlistId);
+            if (playlist == null)
+                return Json(new { success = false, message = "Playlist không tồn tại" });
+
+            playlist.Name = newName;
+            await _context.Playlists.UpdateAsync(playlistId, playlist);
+
+            return Json(new { success = true, message = "Cập nhật tên playlist thành công" });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateImage(string playlistId, IFormFile imageFile)
+        {
+            if (imageFile == null || imageFile.Length == 0)
+                return Json(new { success = false, message = "Tệp hình ảnh không hợp lệ" });
+
+            if (!IsValidImageFile(imageFile))
+                return Json(new { success = false, message = "Chỉ hỗ trợ các tệp hình ảnh (jpg, png, gif, webp)" });
+
+            var playlist = await _context.Playlists.FindByIdAsync(playlistId);
+            if (playlist == null)
+                return Json(new { success = false, message = "Playlist không tồn tại" });
+
+            try
+            {
+                string imageFileName = Path.Combine("uploads", "playlists", $"{playlistId}_{Guid.NewGuid()}.{GetFileExtension(imageFile.FileName)}");
+                string imageFullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", imageFileName);
+
+                Directory.CreateDirectory(Path.GetDirectoryName(imageFullPath));
+
+                using (var stream = new FileStream(imageFullPath, FileMode.Create))
+                {
+                    await imageFile.CopyToAsync(stream);
+                }
+
+                var existingImagePath = playlist.ImageUrl != null ? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", playlist.ImageUrl) : null;
+                if (!string.IsNullOrEmpty(existingImagePath) && System.IO.File.Exists(existingImagePath))
+                {
+                    System.IO.File.Delete(existingImagePath);
+                }
+
+                playlist.ImageUrl = "/" + imageFileName.Replace("\\", "/");
+                await _context.Playlists.UpdateAsync(playlistId, playlist);
+
+                return Json(new { success = true, message = "Cập nhật hình ảnh thành công", imageUrl = "/" + imageFileName.Replace("\\", "/") });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Lỗi khi cập nhật hình ảnh: " + ex.Message });
+            }
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetUserPlaylists()
+        public async Task<IActionResult> Delete(string id)
         {
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-            if (userIdClaim == null) return Unauthorized();
+            var playlist = await _context.Playlists.FindByIdAsync(id);
+            if (playlist == null)
+                return NotFound();
 
-            if (!int.TryParse(userIdClaim.Value, out var userId)) return Unauthorized();
-
-            var playlists = await _context.Playlists
-                .Where(p => p.UserId == userId)
-                .OrderByDescending(p => p.CreatedAt)
-                .Select(p => new
-                {
-                    p.Id,
-                    p.Name,
-                    p.Description,
-                    p.ImageUrl,
-                    p.IsPrivate
-                })
-                .ToListAsync();
-
-            return Json(playlists);
-        }
-        // Xóa Playlist
-        [HttpPost]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var playlist = await _context.Playlists.FindAsync(id);
-            if (playlist == null) return NotFound();
-
-            // Xóa các liên kết trong bảng trung gian trước (nếu có)
-            var links = _context.PlaylistSongs.Where(ps => ps.PlaylistId == id);
-            _context.PlaylistSongs.RemoveRange(links);
-
-            _context.Playlists.Remove(playlist);
-            await _context.SaveChangesAsync();
-
-            return Ok(); // Trả về thành công để JavaScript load lại trang
+            return View(playlist);
         }
 
-        // Đổi trạng thái Riêng tư/Công khai
-        [HttpPost]
-        public async Task<IActionResult> TogglePrivacy(int id)
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(string id)
         {
-            var playlist = await _context.Playlists.FindAsync(id);
-            if (playlist == null) return NotFound();
+            var playlist = await _context.Playlists.FindByIdAsync(id);
+            if (playlist == null)
+                return NotFound();
 
-            playlist.IsPrivate = !playlist.IsPrivate; // Giả sử bạn đã thêm cột này vào DB
-            await _context.SaveChangesAsync();
-            return Ok();
-        }
-        // Đổi tên
-        [HttpPost]
-        public async Task<IActionResult> UpdateName([FromBody] PlaylistUpdateModel model)
-        {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !int.TryParse(userIdClaim, out var userId))
-                return Unauthorized();
+            var filterSongs = Builders<PlaylistSong>.Filter.Eq(ps => ps.PlaylistId, id);
+            await _context.PlaylistSongs.DeleteManyAsync(filterSongs);
 
-            var playlist = await _context.Playlists.FindAsync(model.Id);
+            await _context.Playlists.DeleteOneAsync(p => p.Id == id);
 
-            if (playlist == null) return NotFound();
-
-            // KIỂM TRA: Nếu không phải chủ sở hữu thì không cho sửa
-            if (playlist.UserId != userId) return Forbid();
-
-            playlist.Name = model.Name;
-            await _context.SaveChangesAsync();
-            return Ok();
+            return RedirectToAction("Index", "Home");
         }
 
-        // Cập nhật mô tả Playlist
-        [HttpPost]
-        public async Task<IActionResult> UpdateDescription([FromBody] PlaylistDescriptionModel model)
+        [HttpGet]
+        public async Task<IActionResult> List()
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !int.TryParse(userIdClaim, out var userId))
-                return Unauthorized();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+                return Challenge();
 
-            var playlist = await _context.Playlists.FindAsync(model.Id);
-
-            if (playlist == null) return NotFound();
-
-            // KIỂM TRA: Nếu không phải chủ sở hữu thì không cho sửa
-            if (playlist.UserId != userId) return Forbid();
-
-            playlist.Description = model.Description;
-            await _context.SaveChangesAsync();
-            return Ok();
+            var playlists = await _context.Playlists.Find(p => p.UserId == userId).ToListAsync();
+            return View(playlists);
         }
 
-        // Đổi ảnh
-        [HttpPost]
-        public async Task<IActionResult> UpdateImage(int id, IFormFile image)
+        public async Task<IActionResult> Index()
         {
-            var playlist = await _context.Playlists.FindAsync(id);
-            if (playlist == null || image == null) return BadRequest();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+                return Challenge();
 
-            // Lưu file vào thư mục wwwroot/covers
-            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(image.FileName);
-            var path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/covers", fileName);
-
-            using (var stream = new FileStream(path, FileMode.Create))
-            {
-                await image.CopyToAsync(stream);
-            }
-
-            playlist.ImageUrl = "/covers/" + fileName;
-            await _context.SaveChangesAsync();
-
-            return Ok(new { newUrl = playlist.ImageUrl });
+            var playlists = await _context.Playlists.Find(p => p.UserId == userId).ToListAsync();
+            return View(playlists);
         }
 
-        // Xóa bài hát khỏi Playlist
-        [HttpPost]
-        public async Task<IActionResult> RemoveSong(int playlistId, int songId)
+        private bool IsValidImageFile(IFormFile file)
         {
-            var playlistSong = await _context.PlaylistSongs
-                .FirstOrDefaultAsync(ps => ps.PlaylistId == playlistId && ps.SongId == songId);
-
-            if (playlistSong == null) return NotFound();
-
-            _context.PlaylistSongs.Remove(playlistSong);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Đã xóa bài hát khỏi playlist!" });
+            var validImageTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+            return validImageTypes.Contains(file.ContentType);
         }
 
-        // Sắp xếp lại thứ tự bài hát trong Playlist
-        [HttpPost]
-        public IActionResult UpdateSongOrder([FromBody] List<int> songIds)
+        private string GetFileExtension(string fileName)
         {
-            // songIds là danh sách ID bài hát theo thứ tự mới
-            // (Chúng tôi không lưu trữ vị trí trong DB, nhưng có thể extend nếu cần)
-            
-            return Ok(new { message = "Thứ tự đã được cập nhật!" });
+            return Path.GetExtension(fileName).TrimStart('.');
         }
+    }
 
-        // Class phụ để nhận dữ liệu JSON
-        public class PlaylistUpdateModel
-        {
-            public int Id { get; set; }
-            public string Name { get; set; }
-        }
+    public class PlaylistResponse
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string UserId { get; set; }
+        public string ImageUrl { get; set; }
+        public int SongCount { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+    }
 
-        public class PlaylistDescriptionModel
-        {
-            public int Id { get; set; }
-            public string Description { get; set; }
-        }
+    public class PlaylistSongRequest
+    {
+        public string PlaylistId { get; set; }
+        public string SongId { get; set; }
+    }
+
+    public class PlaylistUpdateRequest
+    {
+        public string PlaylistId { get; set; }
+        public string NewName { get; set; }
     }
 }

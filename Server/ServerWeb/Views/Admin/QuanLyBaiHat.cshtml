@@ -40,8 +40,8 @@
                             <td>@item.Genre</td>
                             <td>@(item.Duration.TotalHours >= 1 ? item.Duration.ToString(@"h\:mm\:ss") : item.Duration.ToString(@"mm\:ss"))</td>
                             <td class="action-icons">
-                                <i class="fas fa-edit" onclick="editSong(@item.Id)"></i>
-                                <i class="fas fa-trash" onclick="deleteSong(@item.Id)"></i>
+                                <i class="fas fa-edit edit-song-btn" style="cursor: pointer;"></i>
+                                <i class="fas fa-trash delete-song-btn" style="cursor: pointer;"></i>
                             </td>
                         </tr>
                     }
@@ -66,31 +66,68 @@
     <script>
         var songToDelete = null;
 
-        document.getElementById('searchInput').addEventListener('input', function (e) {
-            var value = e.target.value.toLowerCase();
-            var rows = document.querySelectorAll('.qunl-baihat-table tbody tr');
-            rows.forEach(function (row) {
-                var text = row.textContent.toLowerCase();
-                row.style.display = text.indexOf(value) > -1 ? '' : 'none';
+        function initializePageHandlers() {
+            // Search functionality
+            var searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function (e) {
+                    var value = e.target.value.toLowerCase();
+                    var rows = document.querySelectorAll('.qunl-baihat-table tbody tr');
+                    rows.forEach(function (row) {
+                        var text = row.textContent.toLowerCase();
+                        row.style.display = text.indexOf(value) > -1 ? '' : 'none';
+                    });
+                });
+            }
+
+            // Event delegation for edit and delete buttons
+            document.addEventListener('click', function (e) {
+                if (e.target.classList.contains('delete-song-btn')) {
+                    const row = e.target.closest('tr');
+                    if (row) {
+                        const songId = row.getAttribute('data-song-id');
+                        if (songId) {
+                            deleteSong(songId);
+                        }
+                    }
+                } else if (e.target.classList.contains('edit-song-btn')) {
+                    const row = e.target.closest('tr');
+                    if (row) {
+                        const songId = row.getAttribute('data-song-id');
+                        if (songId) {
+                            editSong(songId);
+                        }
+                    }
+                }
             });
-        });
+        }
 
         function editSong(id) {
+            console.log('Editing song:', id);
             window.location.href = '/Song/Edit/' + id;
         }
 
         function deleteSong(id) {
+            console.log('Deleting song:', id);
             songToDelete = id;
-            document.getElementById('deleteConfirmationOverlay').classList.remove('hidden');
+            var overlay = document.getElementById('deleteConfirmationOverlay');
+            if (overlay) {
+                overlay.classList.remove('hidden');
+            }
         }
 
         function closeDeletePopup() {
             songToDelete = null;
-            document.getElementById('deleteConfirmationOverlay').classList.add('hidden');
+            var overlay = document.getElementById('deleteConfirmationOverlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
         }
 
         function confirmDeleteSong() {
             if (!songToDelete) return;
+            
+            console.log('Confirming delete for song:', songToDelete);
 
             fetch('/Home/DeleteSong', {
                 method: 'POST',
@@ -101,17 +138,30 @@
             })
                 .then(r => r.json())
                 .then(data => {
+                    console.log('Delete response:', data);
                     if (data.success) {
                         const row = document.querySelector('tr[data-song-id="' + songToDelete + '"]');
                         if (row) row.remove();
+                        alert('Xóa bài hát thành công');
                         closeDeletePopup();
                     } else {
                         alert(data.message || 'Xóa thất bại.');
                     }
                 })
-                .catch(() => {
+                .catch(error => {
+                    console.error('Error:', error);
                     alert('Lỗi mạng khi xóa bài hát. Vui lòng thử lại.');
+                })
+                .finally(() => {
+                    closeDeletePopup();
                 });
+        }
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializePageHandlers);
+        } else {
+            initializePageHandlers();
         }
     </script>
 }

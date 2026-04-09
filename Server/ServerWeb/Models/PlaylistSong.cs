@@ -1,19 +1,21 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace ServerWeb.Models
 {
     public class PlaylistSong
     {
-        [Key]
-        public int Id { get; set; }
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? Id { get; set; }
 
-        public int PlaylistId { get; set; }
-        [ForeignKey("PlaylistId")]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? PlaylistId { get; set; }
         public virtual Playlist? Playlist { get; set; }
 
-        public int SongId { get; set; }
-        [ForeignKey("SongId")]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? SongId { get; set; }
         public virtual Song? Song { get; set; }
 
         public DateTime AddedAt { get; set; } = DateTime.Now;

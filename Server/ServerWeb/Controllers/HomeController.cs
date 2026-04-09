@@ -1,137 +1,521 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.Mvc;
 using ServerWeb.Data;
 using ServerWeb.Models;
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+using ServerWeb.Services;
+using MongoDB.Driver;
+using MongoDB.Bson;
 using System.Security.Claims;
-using System.Collections.Generic;
+using System.Text;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
 
 namespace ServerWeb.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
         private readonly AppDbContext _dbContext;
-        private readonly IWebHostEnvironment _env;
+        private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly ILogger<HomeController> _logger;
 
-        public HomeController(ILogger<HomeController> logger, AppDbContext dbContext, IWebHostEnvironment env)
+        public HomeController(AppDbContext dbContext, IWebHostEnvironment webHostEnvironment, ILogger<HomeController> logger)
         {
-            _logger = logger;
             _dbContext = dbContext;
-            _env = env;
+            _webHostEnvironment = webHostEnvironment;
+            _logger = logger;
         }
 
-        // 1. Trang chủ cho người dùng
-        public IActionResult Index()
+        // Main view displaying all songs
+        [HttpGet]
+        public async Task<IActionResult> Index()
         {
-            var songs = _dbContext.Songs.OrderBy(s => s.Id).ToList();
-            return View(songs);
-        }
-
-        // --- Action Discovery mới thêm vào ---
-        public IActionResult Discovery()
-        {
-            var songs = _dbContext.Songs.OrderByDescending(s => s.Id).ToList();
-            ViewBag.Genres = _dbContext.Songs
-                .Where(s => !string.IsNullOrWhiteSpace(s.Genre))
-                .Select(s => s.Genre)
-                .Distinct()
-                .OrderBy(g => g)
-                .ToList();
-            ViewBag.TopArtists = _dbContext.Songs
-                .Where(s => !string.IsNullOrWhiteSpace(s.Author))
-                .Select(s => s.Author)
-                .Distinct()
-                .OrderBy(a => a)
-                .Take(12)
-                .ToList();
-            ViewBag.SearchQuery = string.Empty;
-            ViewBag.SelectedGenre = string.Empty;
-            ViewBag.PageTitle = "Khám phá";
-            return View(songs);
-        }
-
-        public IActionResult Search(string query, string genre)
-        {
-            var songsQuery = _dbContext.Songs.AsQueryable();
-            if (!string.IsNullOrWhiteSpace(query))
+            try
             {
-                var lower = query.Trim().ToLower();
-                songsQuery = songsQuery.Where(s =>
-                    (!string.IsNullOrEmpty(s.Name) && s.Name.ToLower().Contains(lower)) ||
-                    (!string.IsNullOrEmpty(s.Author) && s.Author.ToLower().Contains(lower)) ||
-                    (!string.IsNullOrEmpty(s.Album) && s.Album.ToLower().Contains(lower)) ||
-                    (!string.IsNullOrEmpty(s.Genre) && s.Genre.ToLower().Contains(lower)));
+                var songs = await _dbContext.Songs.Find(Builders<Song>.Filter.Empty)
+                    .SortByDescending(s => s.Id)
+                    .ToListAsync();
+                return View(songs);
             }
-            if (!string.IsNullOrWhiteSpace(genre))
+            catch (Exception ex)
             {
-                var selectedGenre = genre.Trim();
-                songsQuery = songsQuery.Where(s => s.Genre == selectedGenre);
+                ModelState.AddModelError("", $"Lỗi tải danh sách bài hát: {ex.Message}");
+                return View(new List<Song>());
+            }
+        }
+
+        // Discovery page - Featured songs and playlists
+        [HttpGet]
+        public async Task<IActionResult> Discovery()
+        {
+            try
+            {
+                var songs = await _dbContext.Songs.Find(Builders<Song>.Filter.Empty)
+                    .SortByDescending(s => s.Id)
+                    .Limit(20)
+                    .ToListAsync();
+
+                var playlists = await _dbContext.Playlists.Find(p => !p.IsPrivate)
+                    .SortByDescending(p => p.CreatedAt)
+                    .Limit(10)
+                    .ToListAsync();
+
+                var topArtists = songs
+                    .Where(s => !string.IsNullOrWhiteSpace(s.Author))
+                    .GroupBy(s => s.Author)
+                    .OrderByDescending(g => g.Count())
+                    .ThenBy(g => g.Key)
+                    .Take(8)
+                    .Select(g => g.Key)
+                    .ToList();
+
+                var genres = await _dbContext.Songs.Find(Builders<Song>.Filter.Empty)
+                    .Project(s => s.Genre)
+                    .ToListAsync();
+
+                ViewBag.PageTitle = "Khám phá";
+                ViewBag.Genres = genres
+                    .Where(g => !string.IsNullOrWhiteSpace(g))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(g => g)
+                    .ToList();
+                ViewBag.TopArtists = topArtists;
+                ViewBag.PopularPlaylists = playlists;
+                return View(songs);
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", $"Lỗi tải trang khám phá: {ex.Message}");
+                ViewBag.PageTitle = "Khám phá";
+                ViewBag.Genres = new List<string>();
+                ViewBag.TopArtists = new List<string>();
+                ViewBag.PopularPlaylists = new List<Playlist>();
+                return View(new List<Song>());
+            }
+        }
+
+        // Search for songs and playlists
+        [HttpGet]
+        public async Task<IActionResult> Search(string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return RedirectToAction("Index");
             }
 
-            var songs = songsQuery.OrderByDescending(s => s.Id).ToList();
-            ViewBag.Genres = _dbContext.Songs
-                .Where(s => !string.IsNullOrWhiteSpace(s.Genre))
-                .Select(s => s.Genre)
-                .Distinct()
-                .OrderBy(g => g)
-                .ToList();
-            ViewBag.TopArtists = _dbContext.Songs
-                .Where(s => !string.IsNullOrWhiteSpace(s.Author))
-                .GroupBy(s => s.Author)
-                .OrderByDescending(g => g.Count())
-                .Select(g => g.Key)
-                .Take(12)
-                .ToList();
-            ViewBag.SearchQuery = query ?? string.Empty;
-            ViewBag.SelectedGenre = genre ?? string.Empty;
-            ViewBag.PageTitle = string.IsNullOrWhiteSpace(query) && string.IsNullOrWhiteSpace(genre) ? "Khám phá" : "Kết quả tìm kiếm";
-            return View("Discovery", songs);
+            try
+            {
+                var songNameFilter = Builders<Song>.Filter.Regex(s => s.Name, new BsonRegularExpression(query, "i"));
+                var songAuthorFilter = Builders<Song>.Filter.Regex(s => s.Author, new BsonRegularExpression(query, "i"));
+                var songGenreFilter = Builders<Song>.Filter.Regex(s => s.Genre, new BsonRegularExpression(query, "i"));
+                var songAlbumFilter = Builders<Song>.Filter.Regex(s => s.Album, new BsonRegularExpression(query, "i"));
+
+                var combinedSongFilter = Builders<Song>.Filter.Or(
+                    songNameFilter, songAuthorFilter, songGenreFilter, songAlbumFilter
+                );
+
+                var songs = await _dbContext.Songs.Find(combinedSongFilter)
+                    .Limit(50)
+                    .ToListAsync();
+
+                var playlistNameFilter = Builders<Playlist>.Filter.Regex(p => p.Name, new BsonRegularExpression(query, "i"));
+                var playlistDescFilter = Builders<Playlist>.Filter.Regex(p => p.Description, new BsonRegularExpression(query, "i"));
+                var isNotPrivateFilter = Builders<Playlist>.Filter.Eq(p => p.IsPrivate, false);
+
+                var combinedPlaylistFilter = Builders<Playlist>.Filter.And(
+                    isNotPrivateFilter,
+                    Builders<Playlist>.Filter.Or(playlistNameFilter, playlistDescFilter)
+                );
+
+                var playlists = await _dbContext.Playlists.Find(combinedPlaylistFilter)
+                    .Limit(20)
+                    .ToListAsync();
+
+                ViewBag.SearchQuery = query;
+                ViewBag.Songs = songs;
+                ViewBag.Playlists = playlists;
+                return View();
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", $"Lỗi tìm kiếm: {ex.Message}");
+                ViewBag.SearchQuery = query;
+                return View();
+            }
         }
 
-        public IActionResult Artist(string name)
+        // View songs by artist
+        [HttpGet]
+        public async Task<IActionResult> Artist(string name)
         {
-            if (string.IsNullOrWhiteSpace(name)) return RedirectToAction("Discovery");
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return RedirectToAction("Index");
+            }
 
-            var artistName = name.Trim();
-            var songs = _dbContext.Songs
-                .Where(s => s.Author == artistName)
-                .OrderByDescending(s => s.Id)
-                .ToList();
+            try
+            {
+                var authorFilter = Builders<Song>.Filter.Eq(s => s.Author, name);
+                var songs = await _dbContext.Songs.Find(authorFilter)
+                    .SortByDescending(s => s.Id)
+                    .ToListAsync();
 
-            if (!songs.Any()) return NotFound();
+                if (songs.Count == 0)
+                {
+                    ViewBag.Message = $"Không tìm thấy bài hát của {name}";
+                }
 
-            ViewBag.ArtistName = artistName;
-            ViewBag.ArtistSongCount = songs.Count;
-            ViewBag.Genres = _dbContext.Songs
-                .Where(s => !string.IsNullOrWhiteSpace(s.Genre))
-                .Select(s => s.Genre)
-                .Distinct()
-                .OrderBy(g => g)
-                .ToList();
-            ViewBag.TopArtists = _dbContext.Songs
-                .Where(s => !string.IsNullOrWhiteSpace(s.Author))
-                .GroupBy(s => s.Author)
-                .OrderByDescending(g => g.Count())
-                .Select(g => g.Key)
-                .Take(12)
-                .ToList();
-            ViewBag.SearchQuery = string.Empty;
-            ViewBag.SelectedGenre = string.Empty;
-            ViewBag.PageTitle = $"Nghệ sĩ: {artistName}";
-            return View(songs);
+                ViewBag.ArtistName = name;
+                ViewBag.SongCount = songs.Count;
+                return View(songs);
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", $"Lỗi: {ex.Message}");
+                return View();
+            }
         }
 
-        [Authorize]
-        public IActionResult Library()
+        // GET: Upload page
+        [HttpGet]
+        public IActionResult UploadSong()
+        {
+            return View(new Song());
+        }
+
+        // POST: Upload song
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UploadSong(string name, string author, string album, string genre, string duration, IFormFile musicFile, IFormFile coverFile)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(author))
+                {
+                    ModelState.AddModelError("", "Tên bài hát và nghệ sĩ không được để trống");
+                    return View();
+                }
+
+                if (musicFile == null || musicFile.Length == 0)
+                {
+                    ModelState.AddModelError("", "Vui lòng chọn tệp nhạc");
+                    return View();
+                }
+
+                // Parse duration from "mm:ss" format
+                TimeSpan songDuration = TimeSpan.Zero;
+                if (!string.IsNullOrWhiteSpace(duration))
+                {
+                    if (TimeSpan.TryParse(duration, out var parsed))
+                    {
+                        songDuration = parsed;
+                    }
+                }
+
+                var song = new Song
+                {
+                    Id = ObjectId.GenerateNewId().ToString(),
+                    Name = name.Trim(),
+                    Author = author.Trim(),
+                    Album = album?.Trim() ?? "Không xác định",
+                    Genre = genre?.Trim() ?? "Khác",
+                    Duration = songDuration
+                };
+
+                string musicFileName = Guid.NewGuid().ToString() + Path.GetExtension(musicFile.FileName);
+                string musicPath = Path.Combine(_webHostEnvironment.WebRootPath, "Music", musicFileName);
+
+                Directory.CreateDirectory(Path.GetDirectoryName(musicPath));
+                using (var stream = new FileStream(musicPath, FileMode.Create))
+                {
+                    await musicFile.CopyToAsync(stream);
+                }
+                song.FilePath = "/Music/" + musicFileName;
+
+                if (coverFile != null && coverFile.Length > 0)
+                {
+                    string coverFileName = Guid.NewGuid().ToString() + Path.GetExtension(coverFile.FileName);
+                    string coverPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", coverFileName);
+
+                    Directory.CreateDirectory(Path.GetDirectoryName(coverPath));
+                    using (var stream = new FileStream(coverPath, FileMode.Create))
+                    {
+                        await coverFile.CopyToAsync(stream);
+                    }
+                    song.CoverPath = "/images/" + coverFileName;
+                }
+
+                await _dbContext.Songs.InsertOneAsync(song);
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", $"Lỗi tải lên: {ex.Message}");
+                return View();
+            }
+        }
+
+        // Like/Unlike song - add to favorites playlist
+        [HttpPost]
+        public async Task<IActionResult> LikeSong(string songId)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Json(new { success = false, message = "Cần đăng nhập" });
+                }
+
+                var song = await _dbContext.Songs.Find(Builders<Song>.Filter.Eq(s => s.Id, songId))
+                    .FirstOrDefaultAsync();
+                if (song == null)
+                {
+                    return Json(new { success = false, message = "Bài hát không tồn tại" });
+                }
+
+                var likesPlaylistFilter = Builders<Playlist>.Filter.And(
+                    Builders<Playlist>.Filter.Eq(p => p.UserId, userId),
+                    Builders<Playlist>.Filter.Eq(p => p.Name, "Yêu thích")
+                );
+
+                var likesPlaylist = await _dbContext.Playlists.Find(likesPlaylistFilter)
+                    .FirstOrDefaultAsync();
+
+                if (likesPlaylist == null)
+                {
+                    likesPlaylist = new Playlist
+                    {
+                        Id = ObjectId.GenerateNewId().ToString(),
+                        Name = "Yêu thích",
+                        Description = "Danh sách bài hát yêu thích",
+                        IsPrivate = true,
+                        UserId = userId,
+                        CreatedAt = DateTime.Now,
+                        PlaylistSongs = new List<PlaylistSong>()
+                    };
+                    await _dbContext.Playlists.InsertOneAsync(likesPlaylist);
+                }
+
+                var existingEntry = await _dbContext.PlaylistSongs.Find(
+                    Builders<PlaylistSong>.Filter.And(
+                        Builders<PlaylistSong>.Filter.Eq(ps => ps.PlaylistId, likesPlaylist.Id),
+                        Builders<PlaylistSong>.Filter.Eq(ps => ps.SongId, songId)
+                    )
+                ).FirstOrDefaultAsync();
+
+                if (existingEntry == null)
+                {
+                    var playlistSong = new PlaylistSong
+                    {
+                        Id = ObjectId.GenerateNewId().ToString(),
+                        PlaylistId = likesPlaylist.Id,
+                        SongId = songId,
+                        AddedAt = DateTime.Now
+                    };
+                    await _dbContext.PlaylistSongs.InsertOneAsync(playlistSong);
+                    return Json(new { success = true, message = "Đã thêm vào yêu thích", liked = true });
+                }
+                else
+                {
+                    await _dbContext.PlaylistSongs.DeleteOneAsync(
+                        Builders<PlaylistSong>.Filter.Eq(ps => ps.Id, existingEntry.Id)
+                    );
+                    return Json(new { success = true, message = "Đã xóa khỏi yêu thích", liked = false });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        // Add song to playlist
+        [HttpPost]
+        public async Task<IActionResult> AddToPlaylist(string songId, string playlistId)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Json(new { success = false, message = "Cần đăng nhập" });
+                }
+
+                var playlist = await _dbContext.Playlists.Find(Builders<Playlist>.Filter.Eq(p => p.Id, playlistId))
+                    .FirstOrDefaultAsync();
+
+                if (playlist == null || playlist.UserId != userId)
+                {
+                    return Json(new { success = false, message = "Danh sách phát không hợp lệ" });
+                }
+
+                var song = await _dbContext.Songs.Find(Builders<Song>.Filter.Eq(s => s.Id, songId))
+                    .FirstOrDefaultAsync();
+                if (song == null)
+                {
+                    return Json(new { success = false, message = "Bài hát không tồn tại" });
+                }
+
+                var existingEntry = await _dbContext.PlaylistSongs.Find(
+                    Builders<PlaylistSong>.Filter.And(
+                        Builders<PlaylistSong>.Filter.Eq(ps => ps.PlaylistId, playlistId),
+                        Builders<PlaylistSong>.Filter.Eq(ps => ps.SongId, songId)
+                    )
+                ).FirstOrDefaultAsync();
+
+                if (existingEntry != null)
+                {
+                    return Json(new { success = false, message = "Bài hát đã có trong danh sách" });
+                }
+
+                var playlistSong = new PlaylistSong
+                {
+                    Id = ObjectId.GenerateNewId().ToString(),
+                    PlaylistId = playlistId,
+                    SongId = songId,
+                    AddedAt = DateTime.Now
+                };
+
+                await _dbContext.PlaylistSongs.InsertOneAsync(playlistSong);
+                return Json(new { success = true, message = "Đã thêm vào danh sách phát" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        // Get user playlists
+        [HttpGet]
+        public async Task<IActionResult> GetUserPlaylists()
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Json(new { success = false, message = "Cần đăng nhập" });
+                }
+
+                var playlists = await _dbContext.Playlists.Find(Builders<Playlist>.Filter.Eq(p => p.UserId, userId))
+                    .ToListAsync();
+
+                return Json(new { success = true, playlists = playlists });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        // Songs by genre
+        [HttpGet]
+        public async Task<IActionResult> ByGenre(string genre)
+        {
+            if (string.IsNullOrWhiteSpace(genre))
+            {
+                return RedirectToAction("Index");
+            }
+
+            try
+            {
+                var genreFilter = Builders<Song>.Filter.Eq(s => s.Genre, genre);
+                var songs = await _dbContext.Songs.Find(genreFilter)
+                    .SortByDescending(s => s.Id)
+                    .ToListAsync();
+
+                ViewBag.GenreName = genre;
+                ViewBag.SongCount = songs.Count;
+                return View(songs);
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", $"Lỗi: {ex.Message}");
+                return View();
+            }
+        }
+
+        // All genres
+        [HttpGet]
+        public async Task<IActionResult> Genres()
+        {
+            try
+            {
+                var songs = await _dbContext.Songs.Find(Builders<Song>.Filter.Empty).ToListAsync();
+                var genres = songs.Where(s => !string.IsNullOrEmpty(s.Genre))
+                    .Select(s => s.Genre)
+                    .Distinct()
+                    .OrderBy(g => g)
+                    .ToList();
+
+                return View(genres);
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", $"Lỗi tải thể loại: {ex.Message}");
+                return View(new List<string>());
+            }
+        }
+
+        // Delete song (Admin only)
+        [HttpPost]
+        public async Task<IActionResult> DeleteSong([FromBody] SongIdRequest request)
+        {
+            try
+            {
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+                if (userRole != "Admin")
+                {
+                    return Json(new { success = false, message = "Bạn không có quyền xóa" });
+                }
+
+                var song = await _dbContext.Songs.Find(Builders<Song>.Filter.Eq(s => s.Id, request.Id))
+                    .FirstOrDefaultAsync();
+                if (song == null)
+                {
+                    return Json(new { success = false, message = "Bài hát không tồn tại" });
+                }
+
+                await _dbContext.PlaylistSongs.DeleteManyAsync(
+                    Builders<PlaylistSong>.Filter.Eq(ps => ps.SongId, request.Id)
+                );
+
+                if (!string.IsNullOrEmpty(song.FilePath))
+                {
+                    try
+                    {
+                        string filePath = Path.Combine(_webHostEnvironment.WebRootPath, song.FilePath.TrimStart("/"[0]));
+                        if (System.IO.File.Exists(filePath))
+                        {
+                            System.IO.File.Delete(filePath);
+                        }
+                    }
+                    catch { }
+                }
+
+                if (!string.IsNullOrEmpty(song.CoverPath))
+                {
+                    try
+                    {
+                        string coverPath = Path.Combine(_webHostEnvironment.WebRootPath, song.CoverPath.TrimStart("/"[0]));
+                        if (System.IO.File.Exists(coverPath))
+                        {
+                            System.IO.File.Delete(coverPath);
+                        }
+                    }
+                    catch { }
+                }
+
+                await _dbContext.Songs.DeleteOneAsync(Builders<Song>.Filter.Eq(s => s.Id, request.Id));
+
+                return Json(new { success = true, message = "Đã xóa bài hát thành công" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        public async Task<IActionResult> Library()
         {
             ViewData["Title"] = "Thư viện";
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -139,280 +523,204 @@ namespace ServerWeb.Controllers
             {
                 return RedirectToAction("Login", "Auth");
             }
-            int userId = int.Parse(userIdClaim.Value);
-            var likedPlaylist = _dbContext.Playlists.FirstOrDefault(p => p.UserId == userId && p.Name == "Liked");
-            List<Song> likedSongs = new List<Song>();
+
+            var userId = userIdClaim.Value;
+            var userFilter = Builders<Playlist>.Filter.Eq(p => p.UserId, userId) 
+                & Builders<Playlist>.Filter.Eq(p => p.Name, "Liked");
+            var likedPlaylist = await _dbContext.Playlists
+                .Find(userFilter)
+                .FirstOrDefaultAsync();
+
+            var likedSongs = new List<Song>();
             if (likedPlaylist != null)
             {
-                likedSongs = _dbContext.PlaylistSongs
-                    .Where(ps => ps.PlaylistId == likedPlaylist.Id)
-                    .Include(ps => ps.Song)
-                    .GroupBy(ps => ps.SongId)
-                    .Select(g => g.First().Song)
-                    .ToList();
+                var playlistSongFilter = Builders<PlaylistSong>.Filter.Eq(ps => ps.PlaylistId, likedPlaylist.Id);
+                var playlistSongs = await _dbContext.PlaylistSongs
+                    .Find(playlistSongFilter)
+                    .ToListAsync();
+
+                var songIds = playlistSongs.Select(ps => ps.SongId).Distinct().ToList();
+                if (songIds.Count > 0)
+                {
+                    var songFilter = Builders<Song>.Filter.In(s => s.Id, songIds);
+                    likedSongs = await _dbContext.Songs
+                        .Find(songFilter)
+                        .ToListAsync();
+                }
             }
+
             ViewBag.LikedSongs = likedSongs;
-            var songs = _dbContext.Songs.OrderBy(s => s.Id).ToList();
-            System.Diagnostics.Debug.WriteLine($"Library: Found {songs.Count} songs in database");
-            foreach (var song in songs)
+            var allSongs = await _dbContext.Songs
+                .Find(_ => true)
+                .SortBy(s => s.Id)
+                .ToListAsync();
+
+            _logger.LogInformation($"Library: Found {allSongs.Count} songs in database");
+            foreach (var song in allSongs)
             {
-                System.Diagnostics.Debug.WriteLine($"Song ID: {song.Id}, Name: {song.Name}");
+                _logger.LogInformation($"Song ID: {song.Id}, Name: {song.Name}");
             }
-            return View(songs);
+
+            return View(allSongs);
         }
 
         public class ToggleLikeRequest
         {
-            public int SongId { get; set; }
+            public string SongId { get; set; }
         }
 
         [HttpPost]
         [Authorize]
         [IgnoreAntiforgeryToken]
-        public IActionResult ToggleLike([FromBody] ToggleLikeRequest request)
+        public async Task<IActionResult> ToggleLike([FromBody] ToggleLikeRequest request)
         {
-            int songId = request?.SongId ?? 0;
-            _logger.LogInformation("ToggleLike called with songId: {SongId}", songId);
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null)
+            try
             {
-                _logger.LogWarning("User not authenticated");
-                return Json(new { success = false, message = "User not authenticated" });
-            }
-            int userId = int.Parse(userIdClaim.Value);
-            _logger.LogInformation("User ID: {UserId}", userId);
-
-            // Check if song exists
-            _logger.LogInformation("Looking for song with ID: {SongId} (type: {SongIdType})", songId, songId.GetType());
-
-            // Try multiple ways to find the song
-            var song = _dbContext.Songs.Find(songId);
-            _logger.LogInformation("Song.Find result: {Song}", song?.Name ?? "null");
-
-            if (song == null)
-            {
-                _logger.LogInformation("Trying FirstOrDefault...");
-                song = _dbContext.Songs.FirstOrDefault(s => s.Id == songId);
-                _logger.LogInformation("FirstOrDefault result: {Song}", song?.Name ?? "null");
-            }
-
-            if (song == null)
-            {
-                _logger.LogInformation("Trying Where + FirstOrDefault...");
-                song = _dbContext.Songs.Where(s => s.Id == songId).FirstOrDefault();
-                _logger.LogInformation("Where + FirstOrDefault result: {Song}", song?.Name ?? "null");
-            }
-
-            if (song == null)
-            {
-                _logger.LogInformation("Trying AsNoTracking...");
-                song = _dbContext.Songs.AsNoTracking().FirstOrDefault(s => s.Id == songId);
-                _logger.LogInformation("AsNoTracking result: {Song}", song?.Name ?? "null");
-            }
-
-            if (song == null)
-            {
-                _logger.LogError("All queries failed for songId: {SongId}", songId);
-                var allSongs = _dbContext.Songs.ToList();
-                _logger.LogInformation("Available songs in database: {Count}", allSongs.Count);
-                foreach (var s in allSongs)
+                var songId = request?.SongId;
+                if (string.IsNullOrWhiteSpace(songId))
                 {
-                    _logger.LogInformation("  ID: {SongId}, Name: {SongName}", s.Id, s.Name);
+                    _logger.LogWarning("Invalid song ID");
+                    return Json(new { success = false, message = "Song ID is invalid" });
                 }
-                return Json(new { success = false, message = $"Song not found. Available songs: {string.Join(", ", allSongs.Select(s => $"{s.Id}"))}" });
-            }
-            _logger.LogInformation("Song found: {SongName}", song.Name);
 
-            var likedPlaylist = _dbContext.Playlists.FirstOrDefault(p => p.UserId == userId && p.Name == "Liked");
-            if (likedPlaylist == null)
-            {
-                System.Diagnostics.Debug.WriteLine("Creating new Liked playlist");
-                likedPlaylist = new Playlist { Name = "Liked", UserId = userId };
-                _dbContext.Playlists.Add(likedPlaylist);
-                _dbContext.SaveChanges();
-            }
+                _logger.LogInformation("ToggleLike called with songId: {SongId}", songId);
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null)
+                {
+                    _logger.LogWarning("User not authenticated");
+                    return Json(new { success = false, message = "User not authenticated" });
+                }
 
-            var existingEntries = _dbContext.PlaylistSongs
-                .Where(ps => ps.PlaylistId == likedPlaylist.Id && ps.SongId == songId)
-                .ToList();
+                var userId = userIdClaim.Value;
+                _logger.LogInformation("User ID: {UserId}", userId);
 
-            if (existingEntries.Any())
-            {
-                // Unlike
-                System.Diagnostics.Debug.WriteLine("Unliking song");
-                _dbContext.PlaylistSongs.RemoveRange(existingEntries);
-                _dbContext.SaveChanges();
-                return Json(new { success = true, liked = false, message = "Song unliked" });
+                var song = await _dbContext.Songs.Find(s => s.Id == songId).FirstOrDefaultAsync();
+                _logger.LogInformation("Song result: {Song}", song?.Name ?? "null");
+
+                if (song == null)
+                {
+                    _logger.LogError("Song not found with ID: {SongId}", songId);
+                    var allSongs = await _dbContext.Songs.Find(_ => true).ToListAsync();
+                    _logger.LogInformation("Available songs in database: {Count}", allSongs.Count);
+                    foreach (var s in allSongs)
+                    {
+                        _logger.LogInformation("  ID: {SongId}, Name: {SongName}", s.Id, s.Name);
+                    }
+                    return Json(new { success = false, message = $"Song not found" });
+                }
+
+                _logger.LogInformation("Song found: {SongName}", song.Name);
+
+                var userFilter = Builders<Playlist>.Filter.Eq(p => p.UserId, userId)
+                    & Builders<Playlist>.Filter.Eq(p => p.Name, "Liked");
+                var likedPlaylist = await _dbContext.Playlists
+                    .Find(userFilter)
+                    .FirstOrDefaultAsync();
+
+                if (likedPlaylist == null)
+                {
+                    _logger.LogInformation("Creating new Liked playlist");
+                    likedPlaylist = new Playlist 
+                    { 
+                        Id = ObjectId.GenerateNewId().ToString(),
+                        Name = "Liked", 
+                        UserId = userId,
+                        CreatedAt = DateTime.Now
+                    };
+                    await _dbContext.Playlists.InsertOneAsync(likedPlaylist);
+                }
+
+                var existingFilter = Builders<PlaylistSong>.Filter.Eq(ps => ps.PlaylistId, likedPlaylist.Id)
+                    & Builders<PlaylistSong>.Filter.Eq(ps => ps.SongId, songId);
+                var existingEntries = await _dbContext.PlaylistSongs
+                    .Find(existingFilter)
+                    .ToListAsync();
+
+                if (existingEntries.Any())
+                {
+                    _logger.LogInformation("Unliking song");
+                    await _dbContext.PlaylistSongs.DeleteManyAsync(existingFilter);
+                    return Json(new { success = true, liked = false, message = "Song unliked" });
+                }
+                else
+                {
+                    _logger.LogInformation("Liking song");
+                    var playlistSong = new PlaylistSong 
+                    { 
+                        Id = ObjectId.GenerateNewId().ToString(),
+                        PlaylistId = likedPlaylist.Id, 
+                        SongId = songId,
+                        AddedAt = DateTime.Now
+                    };
+                    await _dbContext.PlaylistSongs.InsertOneAsync(playlistSong);
+                    return Json(new { success = true, liked = true, message = "Song liked" });
+                }
             }
-            else
+            catch (Exception ex)
             {
-                // Like
-                System.Diagnostics.Debug.WriteLine("Liking song");
-                var playlistSong = new PlaylistSong { PlaylistId = likedPlaylist.Id, SongId = songId };
-                _dbContext.PlaylistSongs.Add(playlistSong);
-                _dbContext.SaveChanges();
-                return Json(new { success = true, liked = true, message = "Song liked" });
+                _logger.LogError(ex, "Error in ToggleLike: {ExceptionMessage}", ex.Message);
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
         }
 
-        // 2. Trang Quản lý chính (Admin)
         public IActionResult Admin()
         {
             return RedirectToAction("QuanLyBaiHat");
         }
 
-        // 3. Quản lý bài hát (Admin)
         [Authorize(Roles = "Admin")]
         [Route("Home/Admin/QuanLyBaiHat")]
-        public IActionResult QuanLyBaiHat()
+        public async Task<IActionResult> QuanLyBaiHat()
         {
-            var songs = _dbContext.Songs.ToList();
+            var songs = await _dbContext.Songs.Find(_ => true).ToListAsync();
             return View("~/Views/Admin/QuanLyBaiHat.cshtml", songs);
         }
 
-        // 4. Quản lý người dùng (Admin)
         [Authorize(Roles = "Admin")]
         [Route("Home/Admin/QuanLyNguoiDung")]
-        public IActionResult QuanLyNguoiDung()
+        public async Task<IActionResult> QuanLyNguoiDung()
         {
-            var users = _dbContext.Users.ToList();
+            var users = await _dbContext.Users.Find(_ => true).ToListAsync();
             return View("~/Views/Admin/QuanLyNguoiDung.cshtml", users);
         }
 
-        // --- CÁC HÀM XỬ LÝ DỮ LIỆU BÀI HÁT ---
-
-        public class SongIdRequest { public int Id { get; set; } }
-
-        [Authorize(Roles = "Admin")]
-        [HttpPost]
-        public async Task<IActionResult> DeleteSong([FromBody] SongIdRequest request)
-        {
-            var song = await _dbContext.Songs.FindAsync(request.Id);
-            if (song == null) return Json(new { success = false, message = "Bài hát không tồn tại" });
-
-            DeletePhysicalFile(song.FilePath);
-            DeletePhysicalFile(song.CoverPath);
-
-            _dbContext.Songs.Remove(song);
-            await _dbContext.SaveChangesAsync();
-            return Json(new { success = true, message = "Xóa bài hát thành công." });
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> EditSong(int id, string name, string author, string album, string genre, string? duration)
-        {
-            var song = await _dbContext.Songs.FindAsync(id);
-            if (song == null) return Json(new { success = false, message = "Bài hát không tồn tại" });
-
-            song.Name = name;
-            song.Author = author;
-            song.Album = album;
-            song.Genre = genre;
-
-            if (!string.IsNullOrEmpty(duration))
-            {
-                if (TimeSpan.TryParseExact(duration.Trim(), new[] { "m\\:ss", "mm\\:ss", "h\\:mm\\:ss", "hh\\:mm\\:ss" }, null, out var parsedDuration))
-                {
-                    song.Duration = parsedDuration;
-                }
-            }
-
-            await _dbContext.SaveChangesAsync();
-            return Json(new { success = true, message = "Cập nhật thành công.", song = new { song.Id, song.Name, song.Author, song.Album, song.Genre, duration = song.Duration.ToString(@"mm\:ss"), song.CoverPath } });
-        }
-
-        // --- CÁC HÀM XỬ LÝ UPLOAD BÀI HÁT (CHỈ ADMIN) ---
-
-        [Authorize(Roles = "Admin")] // Chặn User thường vào xem giao diện upload
-        [HttpGet]
-        public IActionResult UploadSong() => View();
-
-        [Authorize(Roles = "Admin")] // Chặn User thường cố tình gửi file qua API/Postman
-        [HttpPost]
-        public async Task<IActionResult> UploadSong(string name, string author, string album, string genre, IFormFile file, IFormFile? coverFile, string? duration)
-        {
-            bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
-
-            if (string.IsNullOrWhiteSpace(name) || file == null)
-            {
-                if (isAjax) return Json(new { success = false, message = "Thiếu thông tin tên bài hát hoặc tệp nhạc." });
-                ModelState.AddModelError("", "Tên bài hát và tệp nhạc là bắt buộc.");
-                return View();
-            }
-
-            try
-            {
-                string musicFolder = Path.Combine(_env.WebRootPath, "Music");
-                string coverFolder = Path.Combine(_env.WebRootPath, "images");
-
-                if (!Directory.Exists(musicFolder)) Directory.CreateDirectory(musicFolder);
-                if (!Directory.Exists(coverFolder)) Directory.CreateDirectory(coverFolder);
-
-                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-                var musicPath = Path.Combine(musicFolder, fileName);
-                using (var stream = new FileStream(musicPath, FileMode.Create)) { await file.CopyToAsync(stream); }
-
-                string? coverPath = null;
-                if (coverFile != null && coverFile.Length > 0)
-                {
-                    var coverName = Guid.NewGuid().ToString() + Path.GetExtension(coverFile.FileName);
-                    var coverFullPath = Path.Combine(coverFolder, coverName);
-                    using (var stream = new FileStream(coverFullPath, FileMode.Create)) { await coverFile.CopyToAsync(stream); }
-                    coverPath = $"/images/{coverName}";
-                }
-
-                var song = new Song
-                {
-                    Name = name,
-                    Author = author,
-                    Album = album,
-                    Genre = genre,
-                    FilePath = $"/Music/{fileName}",
-                    CoverPath = coverPath,
-                    Duration = TimeSpan.Zero
-                };
-
-                if (!string.IsNullOrEmpty(duration) && TimeSpan.TryParseExact(duration.Trim(), new[] { "m\\:ss", "mm\\:ss", "h\\:mm\\:ss", "hh\\:mm\\:ss" }, null, out var parsedDuration))
-                {
-                    song.Duration = parsedDuration;
-                }
-
-                _dbContext.Songs.Add(song);
-                await _dbContext.SaveChangesAsync();
-
-                if (isAjax) return Json(new { success = true, song });
-                return RedirectToAction("QuanLyBaiHat");
-            }
-            catch (Exception ex)
-            {
-                if (isAjax) return Json(new { success = false, message = "Lỗi: " + ex.Message });
-                return View();
-            }
-        }
-
-        // --- CÁC HÀM XỬ LÝ HỒ SƠ NGƯỜI DÙNG (PROFILE) ---
-
+        // User profile
         [Authorize]
-        public async Task<IActionResult> Profile()
+        public async Task<IActionResult> Profile(string id = null)
         {
-            var userName = User.Identity?.Name;
-            if (string.IsNullOrEmpty(userName)) return RedirectToAction("Index");
+            string userId;
+            if (!string.IsNullOrEmpty(id))
+            {
+                userId = id;
+            }
+            else
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null)
+                    return RedirectToAction("Login", "Auth");
+                userId = userIdClaim.Value;
+            }
 
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Username == userName);
-            if (user == null) return NotFound();
+            var user = await _dbContext.Users.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound("User not found");
 
             return View(user);
         }
 
+        // Edit user profile
         [Authorize]
         [HttpGet]
         public async Task<IActionResult> EditProfile()
         {
-            var userName = User.Identity?.Name;
-            if (string.IsNullOrEmpty(userName)) return RedirectToAction("Index");
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+                return RedirectToAction("Login", "Auth");
 
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Username == userName);
-            if (user == null) return NotFound();
+            var userId = userIdClaim.Value;
+            var user = await _dbContext.Users.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound("User not found");
 
             return View(user);
         }
@@ -420,77 +728,170 @@ namespace ServerWeb.Controllers
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditProfile(User model, IFormFile? avatarFile)
+        public async Task<IActionResult> EditProfile(string id, User model, IFormFile avatarFile)
         {
-            // 1. Tìm user trong DB bằng ID truyền từ Form ẩn
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == model.Id);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+                return RedirectToAction("Login", "Auth");
 
+            var userId = userIdClaim.Value;
+            if (id != userId)
+                return Forbid();
+
+            var user = await _dbContext.Users.FindByIdAsync(userId);
             if (user == null)
-            {
-                // Nếu vào đây là do <input type="hidden" asp-for="Id" /> của bạn bị sai
-                return NotFound("Không tìm thấy User với ID: " + model.Id);
-            }
+                return NotFound("User not found");
 
-            // 2. Gán dữ liệu mới (Chỉ gán nếu có dữ liệu để tránh ghi đè NULL)
-            user.Username = model.Username ?? user.Username;
+            user.Username = model.Username;
             user.Bio = model.Bio;
 
-            // Nếu Form có gửi Email lên thì cập nhật, không thì giữ nguyên bản cũ trong DB
-            if (!string.IsNullOrEmpty(model.Email))
-            {
-                user.Email = model.Email;
-            }
-
-            // 3. Xử lý Ảnh
             if (avatarFile != null && avatarFile.Length > 0)
             {
-                string folder = Path.Combine(_env.WebRootPath, "images");
-                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
-
-                string fileName = Guid.NewGuid().ToString() + Path.GetExtension(avatarFile.FileName);
-                string filePath = Path.Combine(folder, fileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
+                try
                 {
-                    await avatarFile.CopyToAsync(stream);
+                    string uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "avatars");
+                    Directory.CreateDirectory(uploadsFolder);
+
+                    string fileName = $"{userId}_{Guid.NewGuid()}{Path.GetExtension(avatarFile.FileName)}";
+                    string filePath = Path.Combine(uploadsFolder, fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await avatarFile.CopyToAsync(stream);
+                    }
+
+                    user.AvatarUrl = $"/uploads/avatars/{fileName}";
                 }
-                user.AvatarUrl = "/images/" + fileName;
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", $"Error uploading avatar: {ex.Message}");
+                    return View(user);
+                }
             }
 
-            // 4. Lưu - Bỏ qua ModelState check tạm thời để test xem có lưu được không
             try
             {
-                _dbContext.Users.Update(user);
-                await _dbContext.SaveChangesAsync();
-                return RedirectToAction("Profile"); // Lưu xong quay về trang cá nhân
+                await _dbContext.Users.UpdateAsync(userId, user);
+                return RedirectToAction("Profile", new { id = userId });
             }
             catch (Exception ex)
             {
-                // Nếu có lỗi SQL, nó sẽ hiện ra ở đây
-                ModelState.AddModelError("", "Lỗi lưu DB: " + ex.InnerException?.Message ?? ex.Message);
-                return View(model);
+                ModelState.AddModelError("", $"Error updating profile: {ex.Message}");
+                return View(user);
             }
         }
 
-        private void DeletePhysicalFile(string? path)
+        // Privacy policy page
+        public IActionResult Privacy()
         {
-            if (string.IsNullOrEmpty(path)) return;
-            try
-            {
-                var fullPath = Path.Combine(_env.WebRootPath, path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                if (System.IO.File.Exists(fullPath)) System.IO.File.Delete(fullPath);
-            }
-            catch { }
+            return View();
         }
 
+        // Access denied page
         public IActionResult AccessDenied()
         {
             return View();
         }
 
-        public IActionResult Privacy() => View();
+        // Request class for delete operations
+        public class SongIdRequest 
+        { 
+            public string Id { get; set; } 
+        }
 
+        public class AdminUpdateUserRequest
+        {
+            public string? Id { get; set; }
+            public string? Name { get; set; }
+            public string? Username { get; set; }
+            public string? Email { get; set; }
+            public string? PhoneNumber { get; set; }
+            public string? Role { get; set; }
+            public bool IsActive { get; set; }
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        public async Task<IActionResult> UpdateUser([FromBody] AdminUpdateUserRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request?.Id))
+                    return Json(new { success = false, message = "ID người dùng không hợp lệ" });
+
+                var user = await _dbContext.Users.FindByIdAsync(request.Id);
+                if (user == null)
+                    return Json(new { success = false, message = "Người dùng không tồn tại" });
+
+                if (string.IsNullOrWhiteSpace(request.Username))
+                    return Json(new { success = false, message = "Username không được để trống" });
+
+                if (string.IsNullOrWhiteSpace(request.Email))
+                    return Json(new { success = false, message = "Email không được để trống" });
+
+                var isDuplicateUsername = await _dbContext.Users.Find(u => u.Username == request.Username && u.Id != request.Id).AnyAsync();
+                if (isDuplicateUsername)
+                    return Json(new { success = false, message = "Username đã tồn tại" });
+
+                var isDuplicateEmail = await _dbContext.Users.Find(u => u.Email == request.Email && u.Id != request.Id).AnyAsync();
+                if (isDuplicateEmail)
+                    return Json(new { success = false, message = "Email đã tồn tại" });
+
+                user.Name = string.IsNullOrWhiteSpace(request.Name) ? user.Name : request.Name.Trim();
+                user.Username = request.Username.Trim();
+                user.Email = request.Email.Trim();
+                user.PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
+                user.Role = request.Role == "Admin" ? "Admin" : "User";
+                user.IsActive = request.IsActive;
+                user.UpdatedAt = DateTime.UtcNow;
+
+                if (string.IsNullOrWhiteSpace(user.Id))
+                    return Json(new { success = false, message = "Dữ liệu người dùng không hợp lệ" });
+
+                await _dbContext.Users.UpdateAsync(user.Id, user);
+                return Json(new { success = true, message = "Cập nhật người dùng thành công" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        // Delete user
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        public async Task<IActionResult> DeleteUser([FromBody] SongIdRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request?.Id))
+                    return Json(new { success = false, message = "ID người dùng không hợp lệ" });
+
+                var user = await _dbContext.Users.FindByIdAsync(request.Id);
+                if (user == null)
+                    return Json(new { success = false, message = "Người dùng không tồn tại" });
+
+                // Delete all playlists associated with this user
+                await _dbContext.Playlists.DeleteManyAsync(
+                    Builders<Playlist>.Filter.Eq(p => p.UserId, request.Id)
+                );
+
+                // Delete the user
+                await _dbContext.Users.DeleteAsync(request.Id);
+
+                return Json(new { success = true, message = "Xóa người dùng thành công" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        // Error handling
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error() => View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        public IActionResult Error()
+        {
+            return View();
+        }
     }
 }

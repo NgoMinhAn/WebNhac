@@ -1,0 +1,625 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using ServerWeb.Data;
+using ServerWeb.Models;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
+
+namespace ServerWeb.Controllers
+{
+    public class HomeController : Controller
+    {
+        private readonly ILogger<HomeController> _logger;
+        private readonly AppDbContext _dbContext;
+        private readonly IWebHostEnvironment _env;
+
+        public HomeController(ILogger<HomeController> logger, AppDbContext dbContext, IWebHostEnvironment env)
+        {
+            _logger = logger;
+            _dbContext = dbContext;
+            _env = env;
+        }
+
+        // 1. Home page for users
+        public async Task<IActionResult> Index()
+        {
+            var songs = await _dbContext.Songs
+                .Find(_ => true)
+                .SortBy(s => s.Id)
+                .ToListAsync();
+            return View(songs);
+        }
+
+        // --- Discovery page ---
+        public async Task<IActionResult> Discovery()
+        {
+            var songs = await _dbContext.Songs
+                .Find(_ => true)
+                .SortByDescending(s => s.Id)
+                .ToListAsync();
+
+            // Get distinct genres
+            var genreFilter = Builders<Song>.Filter.Ne(s => s.Genre, BsonNull.Value)
+                & Builders<Song>.Filter.Ne(s => s.Genre, "");
+            var genres = await _dbContext.Songs
+                .Find(genreFilter)
+                .Project(s => s.Genre)
+                .ToListAsync();
+            var uniqueGenres = genres.Distinct().OrderBy(g => g).ToList();
+
+            // Get top artists
+            var authorFilter = Builders<Song>.Filter.Ne(s => s.Author, BsonNull.Value)
+                & Builders<Song>.Filter.Ne(s => s.Author, "");
+            var allSongs = await _dbContext.Songs
+                .Find(authorFilter)
+                .ToListAsync();
+            var topArtists = allSongs
+                .GroupBy(s => s.Author)
+                .OrderByDescending(g => g.Count())
+                .Select(g => g.Key)
+                .Take(12)
+                .ToList();
+
+            ViewBag.Genres = uniqueGenres;
+            ViewBag.TopArtists = topArtists;
+            ViewBag.SearchQuery = string.Empty;
+            ViewBag.SelectedGenre = string.Empty;
+            ViewBag.PageTitle = "Khám phá";
+            return View(songs);
+        }
+
+        public async Task<IActionResult> Search(string query, string genre)
+        {
+            var filters = new List<FilterDefinition<Song>>();
+
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                var lowerQuery = query.Trim().ToLower();
+                var searchFilters = new List<FilterDefinition<Song>>();
+
+                // Use BsonRegularExpression for case-insensitive search
+                var regex = new BsonRegularExpression(lowerQuery, "i");
+                
+                searchFilters.Add(Builders<Song>.Filter.Regex(s => s.Name, regex));
+                searchFilters.Add(Builders<Song>.Filter.Regex(s => s.Author, regex));
+                searchFilters.Add(Builders<Song>.Filter.Regex(s => s.Album, regex));
+                searchFilters.Add(Builders<Song>.Filter.Regex(s => s.Genre, regex));
+
+                filters.Add(Builders<Song>.Filter.Or(searchFilters));
+            }
+
+            if (!string.IsNullOrWhiteSpace(genre))
+            {
+                var selectedGenre = genre.Trim();
+                filters.Add(Builders<Song>.Filter.Eq(s => s.Genre, selectedGenre));
+            }
+
+            var finalFilter = filters.Count > 0 
+                ? Builders<Song>.Filter.And(filters)
+                : Builders<Song>.Filter.Empty;
+
+            var songs = await _dbContext.Songs
+                .Find(finalFilter)
+                .SortByDescending(s => s.Id)
+                .ToListAsync();
+
+            // Get genres
+            var genreFilter = Builders<Song>.Filter.Ne(s => s.Genre, BsonNull.Value)
+                & Builders<Song>.Filter.Ne(s => s.Genre, "");
+            var genres = await _dbContext.Songs
+                .Find(genreFilter)
+                .Project(s => s.Genre)
+                .ToListAsync();
+            var uniqueGenres = genres.Distinct().OrderBy(g => g).ToList();
+
+            // Get top artists
+            var authorFilter = Builders<Song>.Filter.Ne(s => s.Author, BsonNull.Value)
+                & Builders<Song>.Filter.Ne(s => s.Author, "");
+            var allSongs = await _dbContext.Songs
+                .Find(authorFilter)
+                .ToListAsync();
+            var topArtists = allSongs
+                .GroupBy(s => s.Author)
+                .OrderByDescending(g => g.Count())
+                .Select(g => g.Key)
+                .Take(12)
+                .ToList();
+
+            ViewBag.Genres = uniqueGenres;
+            ViewBag.TopArtists = topArtists;
+            ViewBag.SearchQuery = query ?? string.Empty;
+            ViewBag.SelectedGenre = genre ?? string.Empty;
+            ViewBag.PageTitle = string.IsNullOrWhiteSpace(query) && string.IsNullOrWhiteSpace(genre) 
+                ? "Khám phá" 
+                : "Kết quả tìm kiếm";
+            return View("Discovery", songs);
+        }
+
+        public async Task<IActionResult> Artist(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) 
+                return RedirectToAction("Discovery");
+
+            var artistName = name.Trim();
+            var filter = Builders<Song>.Filter.Eq(s => s.Author, artistName);
+            var songs = await _dbContext.Songs
+                .Find(filter)
+                .SortByDescending(s => s.Id)
+                .ToListAsync();
+
+            if (!songs.Any()) 
+                return NotFound();
+
+            // Get genres
+            var genreFilter = Builders<Song>.Filter.Ne(s => s.Genre, BsonNull.Value)
+                & Builders<Song>.Filter.Ne(s => s.Genre, "");
+            var genres = await _dbContext.Songs
+                .Find(genreFilter)
+                .Project(s => s.Genre)
+                .ToListAsync();
+            var uniqueGenres = genres.Distinct().OrderBy(g => g).ToList();
+
+            // Get top artists
+            var authorFilter = Builders<Song>.Filter.Ne(s => s.Author, BsonNull.Value)
+                & Builders<Song>.Filter.Ne(s => s.Author, "");
+            var allSongs = await _dbContext.Songs
+                .Find(authorFilter)
+                .ToListAsync();
+            var topArtists = allSongs
+                .GroupBy(s => s.Author)
+                .OrderByDescending(g => g.Count())
+                .Select(g => g.Key)
+                .Take(12)
+                .ToList();
+
+            ViewBag.ArtistName = artistName;
+            ViewBag.ArtistSongCount = songs.Count;
+            ViewBag.Genres = uniqueGenres;
+            ViewBag.TopArtists = topArtists;
+            ViewBag.SearchQuery = string.Empty;
+            ViewBag.SelectedGenre = string.Empty;
+            ViewBag.PageTitle = $"Nghệ sĩ: {artistName}";
+            return View(songs);
+        }
+
+        [Authorize]
+        public async Task<IActionResult> Library()
+        {
+            ViewData["Title"] = "Thư viện";
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+            {
+                return RedirectToAction("Login", "Auth");
+            }
+
+            var userId = userIdClaim.Value;
+            var userFilter = Builders<Playlist>.Filter.Eq(p => p.UserId, userId) 
+                & Builders<Playlist>.Filter.Eq(p => p.Name, "Liked");
+            var likedPlaylist = await _dbContext.Playlists
+                .Find(userFilter)
+                .FirstOrDefaultAsync();
+
+            var likedSongs = new List<Song>();
+            if (likedPlaylist != null)
+            {
+                var playlistSongFilter = Builders<PlaylistSong>.Filter.Eq(ps => ps.PlaylistId, likedPlaylist.Id);
+                var playlistSongs = await _dbContext.PlaylistSongs
+                    .Find(playlistSongFilter)
+                    .ToListAsync();
+
+                var songIds = playlistSongs.Select(ps => ps.SongId).Distinct().ToList();
+                if (songIds.Count > 0)
+                {
+                    var songFilter = Builders<Song>.Filter.In(s => s.Id, songIds);
+                    likedSongs = await _dbContext.Songs
+                        .Find(songFilter)
+                        .ToListAsync();
+                }
+            }
+
+            ViewBag.LikedSongs = likedSongs;
+            var allSongs = await _dbContext.Songs
+                .Find(_ => true)
+                .SortBy(s => s.Id)
+                .ToListAsync();
+
+            _logger.LogInformation($"Library: Found {allSongs.Count} songs in database");
+            foreach (var song in allSongs)
+            {
+                _logger.LogInformation($"Song ID: {song.Id}, Name: {song.Name}");
+            }
+
+            return View(allSongs);
+        }
+
+        public class ToggleLikeRequest
+        {
+            public string SongId { get; set; }
+        }
+
+        [HttpPost]
+        [Authorize]
+        [IgnoreAntiforgeryToken]
+        public async Task<IActionResult> ToggleLike([FromBody] ToggleLikeRequest request)
+        {
+            var songId = request?.SongId;
+            if (string.IsNullOrWhiteSpace(songId))
+            {
+                _logger.LogWarning("Invalid song ID");
+                return Json(new { success = false, message = "Song ID is invalid" });
+            }
+
+            _logger.LogInformation("ToggleLike called with songId: {SongId}", songId);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+            {
+                _logger.LogWarning("User not authenticated");
+                return Json(new { success = false, message = "User not authenticated" });
+            }
+
+            var userId = userIdClaim.Value;
+            _logger.LogInformation("User ID: {UserId}", userId);
+
+            // Check if song exists
+            _logger.LogInformation("Looking for song with ID: {SongId}", songId);
+            var song = await _dbContext.Songs.Find(s => s.Id == songId).FirstOrDefaultAsync();
+            _logger.LogInformation("Song result: {Song}", song?.Name ?? "null");
+
+            if (song == null)
+            {
+                _logger.LogError("Song not found with ID: {SongId}", songId);
+                var allSongs = await _dbContext.Songs.Find(_ => true).ToListAsync();
+                _logger.LogInformation("Available songs in database: {Count}", allSongs.Count);
+                foreach (var s in allSongs)
+                {
+                    _logger.LogInformation("  ID: {SongId}, Name: {SongName}", s.Id, s.Name);
+                }
+                return Json(new { success = false, message = $"Song not found" });
+            }
+
+            _logger.LogInformation("Song found: {SongName}", song.Name);
+
+            // Get or create "Liked" playlist for user
+            var userFilter = Builders<Playlist>.Filter.Eq(p => p.UserId, userId)
+                & Builders<Playlist>.Filter.Eq(p => p.Name, "Liked");
+            var likedPlaylist = await _dbContext.Playlists
+                .Find(userFilter)
+                .FirstOrDefaultAsync();
+
+            if (likedPlaylist == null)
+            {
+                _logger.LogInformation("Creating new Liked playlist");
+                likedPlaylist = new Playlist 
+                { 
+                    Id = ObjectId.GenerateNewId().ToString(),
+                    Name = "Liked", 
+                    UserId = userId,
+                    CreatedAt = DateTime.Now
+                };
+                await _dbContext.Playlists.InsertOneAsync(likedPlaylist);
+            }
+
+            // Check if song is already liked
+            var existingFilter = Builders<PlaylistSong>.Filter.Eq(ps => ps.PlaylistId, likedPlaylist.Id)
+                & Builders<PlaylistSong>.Filter.Eq(ps => ps.SongId, songId);
+            var existingEntries = await _dbContext.PlaylistSongs
+                .Find(existingFilter)
+                .ToListAsync();
+
+            if (existingEntries.Any())
+            {
+                // Unlike - delete all matching entries
+                _logger.LogInformation("Unliking song");
+                await _dbContext.PlaylistSongs.DeleteManyAsync(existingFilter);
+                return Json(new { success = true, liked = false, message = "Song unliked" });
+            }
+            else
+            {
+                // Like - add new entry
+                _logger.LogInformation("Liking song");
+                var playlistSong = new PlaylistSong 
+                { 
+                    Id = ObjectId.GenerateNewId().ToString(),
+                    PlaylistId = likedPlaylist.Id, 
+                    SongId = songId,
+                    AddedAt = DateTime.Now
+                };
+                await _dbContext.PlaylistSongs.InsertOneAsync(playlistSong);
+                return Json(new { success = true, liked = true, message = "Song liked" });
+            }
+        }
+
+        // 2. Admin panel
+        public IActionResult Admin()
+        {
+            return RedirectToAction("QuanLyBaiHat");
+        }
+
+        // 3. Song management (Admin)
+        [Authorize(Roles = "Admin")]
+        [Route("Home/Admin/QuanLyBaiHat")]
+        public async Task<IActionResult> QuanLyBaiHat()
+        {
+            var songs = await _dbContext.Songs.Find(_ => true).ToListAsync();
+            return View("~/Views/Admin/QuanLyBaiHat.cshtml", songs);
+        }
+
+        // 4. User management (Admin)
+        [Authorize(Roles = "Admin")]
+        [Route("Home/Admin/QuanLyNguoiDung")]
+        public async Task<IActionResult> QuanLyNguoiDung()
+        {
+            var users = await _dbContext.Users.Find(_ => true).ToListAsync();
+            return View("~/Views/Admin/QuanLyNguoiDung.cshtml", users);
+        }
+
+        // 5. Delete song (Admin)
+        public class SongIdRequest 
+        { 
+            public string Id { get; set; } 
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        public async Task<IActionResult> DeleteSong([FromBody] SongIdRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request?.Id))
+                {
+                    return Json(new { success = false, message = "Invalid song ID" });
+                }
+
+                var filter = Builders<Song>.Filter.Eq(s => s.Id, request.Id);
+                var song = await _dbContext.Songs.Find(filter).FirstOrDefaultAsync();
+
+                if (song == null) 
+                    return Json(new { success = false, message = "Bài hát không tồn tại" });
+
+                DeletePhysicalFile(song.FilePath);
+                DeletePhysicalFile(song.CoverPath);
+
+                await _dbContext.Songs.DeleteOneAsync(filter);
+                return Json(new { success = true, message = "Xóa bài hát thành công." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting song");
+                return Json(new { success = false, message = "Error deleting song" });
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateSong([FromBody] Song request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request?.Id))
+                {
+                    return Json(new { success = false, message = "Invalid song ID" });
+                }
+
+                var filter = Builders<Song>.Filter.Eq(s => s.Id, request.Id);
+                var update = Builders<Song>.Update
+                    .Set(s => s.Name, request.Name)
+                    .Set(s => s.Author, request.Author)
+                    .Set(s => s.Album, request.Album)
+                    .Set(s => s.Genre, request.Genre);
+
+                var result = await _dbContext.Songs.UpdateOneAsync(filter, update);
+
+                if (result.ModifiedCount == 0)
+                    return Json(new { success = false, message = "Song not found" });
+
+                return Json(new { success = true, message = "Song updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating song");
+                return Json(new { success = false, message = "Error updating song" });
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteUser([FromBody] SongIdRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request?.Id))
+                {
+                    return Json(new { success = false, message = "Invalid user ID" });
+                }
+
+                var filter = Builders<User>.Filter.Eq(u => u.Id, request.Id);
+                var result = await _dbContext.Users.DeleteOneAsync(filter);
+
+                if (result.DeletedCount == 0)
+                    return Json(new { success = false, message = "User not found" });
+
+                return Json(new { success = true, message = "User deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting user");
+                return Json(new { success = false, message = "Error deleting user" });
+            }
+        }
+
+        // Track song play
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> PlaySong([FromBody] SongIdRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request?.Id))
+                {
+                    return Json(new { success = false, message = "Invalid song ID" });
+                }
+
+                var filter = Builders<Song>.Filter.Eq(s => s.Id, request.Id);
+                var song = await _dbContext.Songs.Find(filter).FirstOrDefaultAsync();
+
+                if (song == null)
+                    return Json(new { success = false, message = "Song not found" });
+
+                _logger.LogInformation("Song played: {SongName} by {Author}", song.Name, song.Author);
+                return Json(new { success = true, message = "Song played", song = song });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error playing song");
+                return Json(new { success = false, message = "Error playing song" });
+            }
+        }
+
+        // Add song to playlist
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> AddSongToPlaylist([FromBody] AddToPlaylistRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request?.PlaylistId) || string.IsNullOrWhiteSpace(request?.SongId))
+                {
+                    return Json(new { success = false, message = "Invalid request" });
+                }
+
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null)
+                {
+                    return Json(new { success = false, message = "User not authenticated" });
+                }
+
+                var userId = userIdClaim.Value;
+
+                // Check if song exists
+                var songFilter = Builders<Song>.Filter.Eq(s => s.Id, request.SongId);
+                var song = await _dbContext.Songs.Find(songFilter).FirstOrDefaultAsync();
+                if (song == null)
+                    return Json(new { success = false, message = "Song not found" });
+
+                // Check if playlist belongs to user
+                var playlistFilter = Builders<Playlist>.Filter.Eq(p => p.Id, request.PlaylistId)
+                    & Builders<Playlist>.Filter.Eq(p => p.UserId, userId);
+                var playlist = await _dbContext.Playlists.Find(playlistFilter).FirstOrDefaultAsync();
+                if (playlist == null)
+                    return Json(new { success = false, message = "Playlist not found or not authorized" });
+
+                // Check if song already in playlist
+                var existingFilter = Builders<PlaylistSong>.Filter.Eq(ps => ps.PlaylistId, request.PlaylistId)
+                    & Builders<PlaylistSong>.Filter.Eq(ps => ps.SongId, request.SongId);
+                var existing = await _dbContext.PlaylistSongs.Find(existingFilter).FirstOrDefaultAsync();
+                if (existing != null)
+                    return Json(new { success = false, message = "Song already in playlist" });
+
+                // Add song to playlist
+                var playlistSong = new PlaylistSong
+                {
+                    Id = ObjectId.GenerateNewId().ToString(),
+                    PlaylistId = request.PlaylistId,
+                    SongId = request.SongId,
+                    AddedAt = DateTime.Now
+                };
+                await _dbContext.PlaylistSongs.InsertOneAsync(playlistSong);
+
+                return Json(new { success = true, message = "Song added to playlist" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding song to playlist");
+                return Json(new { success = false, message = "Error adding song to playlist" });
+            }
+        }
+
+        public class AddToPlaylistRequest
+        {
+            public string PlaylistId { get; set; }
+            public string SongId { get; set; }
+        }
+
+        // Remove song from playlist
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> RemoveSongFromPlaylist([FromBody] AddToPlaylistRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request?.PlaylistId) || string.IsNullOrWhiteSpace(request?.SongId))
+                {
+                    return Json(new { success = false, message = "Invalid request" });
+                }
+
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null)
+                {
+                    return Json(new { success = false, message = "User not authenticated" });
+                }
+
+                var userId = userIdClaim.Value;
+
+                // Verify playlist belongs to user
+                var playlistFilter = Builders<Playlist>.Filter.Eq(p => p.Id, request.PlaylistId)
+                    & Builders<Playlist>.Filter.Eq(p => p.UserId, userId);
+                var playlist = await _dbContext.Playlists.Find(playlistFilter).FirstOrDefaultAsync();
+                if (playlist == null)
+                    return Json(new { success = false, message = "Playlist not found or not authorized" });
+
+                // Remove song from playlist
+                var removeFilter = Builders<PlaylistSong>.Filter.Eq(ps => ps.PlaylistId, request.PlaylistId)
+                    & Builders<PlaylistSong>.Filter.Eq(ps => ps.SongId, request.SongId);
+                var result = await _dbContext.PlaylistSongs.DeleteManyAsync(removeFilter);
+
+                if (result.DeletedCount == 0)
+                    return Json(new { success = false, message = "Song not found in playlist" });
+
+                return Json(new { success = true, message = "Song removed from playlist" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing song from playlist");
+                return Json(new { success = false, message = "Error removing song" });
+            }
+        }
+
+        // Error view
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+
+        // Helper method to delete physical files
+        private void DeletePhysicalFile(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                return;
+
+            try
+            {
+                var fullPath = Path.Combine(_env.ContentRootPath, "wwwroot", filePath.TrimStart('/'));
+                if (System.IO.File.Exists(fullPath))
+                {
+                    System.IO.File.Delete(fullPath);
+                    _logger.LogInformation("Deleted file: {FilePath}", fullPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting file: {FilePath}", filePath);
+            }
+        }
+    }
+}

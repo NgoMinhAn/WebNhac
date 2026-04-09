@@ -174,7 +174,7 @@
         function getSongFromCard(card) {
             if (!card) return null;
             return {
-                Id: Number(card.dataset.songId),
+                Id: card.dataset.songId || card.dataset.id, // Keep as string
                 Name: decodeHtmlEntities(card.dataset.songName || card.dataset.name || ''),
                 Author: decodeHtmlEntities(card.dataset.songAuthor || card.dataset.author || ''),
                 Album: decodeHtmlEntities(card.dataset.songAlbum || card.dataset.album || ''),
@@ -194,7 +194,12 @@
         }
 
         function showPopupPlayer() {
-            if (!popupPlayer) return;
+            console.log('showPopupPlayer called, popupPlayer element:', popupPlayer);
+            if (!popupPlayer) {
+                console.error('popupPlayer element not found');
+                return;
+            }
+            console.log('Adding visible class to popupPlayer');
             popupPlayer.classList.add('visible');
             popupPlayer.setAttribute('aria-hidden', 'false');
         }
@@ -238,16 +243,31 @@
 
         function toggleFavorite() {
             if (!favoriteBtn || currentSongId === null) return;
+            console.log('toggleFavorite called with currentSongId:', currentSongId);
             fetch('/Home/ToggleLike', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({ songId: Number(currentSongId) })
+                body: JSON.stringify({ SongId: currentSongId }) // PascalCase to match C# model
             })
-                .then(res => res.json())
+                .then(res => {
+                    console.log('ToggleLike HTTP status:', res.status);
+                    if (!res.ok) {
+                        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                    }
+                    return res.text().then(text => {
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            console.error('Failed to parse JSON response:', text);
+                            throw new Error('Invalid JSON response from server');
+                        }
+                    });
+                })
                 .then(data => {
+                    console.log('ToggleLike response:', data);
                     if (!data || !data.success) {
                         console.warn('Unable to toggle favorite:', data?.message);
                         return;
@@ -268,37 +288,66 @@
             if (Array.isArray(playlist) && playlist.length) {
                 if (typeof playlist[0] === 'object') {
                     currentPlaylist = playlist;
-                    currentPlaylistIds = playlist.map(item => Number(item.Id));
+                    currentPlaylistIds = playlist.map(item => String(item.Id)); // Keep as strings
                 } else {
                     currentPlaylist = [];
-                    currentPlaylistIds = playlist.map(id => Number(id));
+                    currentPlaylistIds = playlist.map(id => String(id)); // Keep as strings
                 }
             }
             if (songId !== null) {
-                currentSongIndex = currentPlaylistIds.indexOf(Number(songId));
+                const songIdStr = String(songId); // Convert songId to string for comparison
+                currentSongIndex = currentPlaylistIds.indexOf(songIdStr);
+                console.log('setPlaylist - songId:', songIdStr, 'found at index:', currentSongIndex, 'playlist:', currentPlaylistIds);
             }
         }
 
         function fetchSongDetails(songId) {
-            return fetch(`/Song/GetSongDetails/${songId}`)
-                .then(res => res.json())
-                .then(song => ({
-                    Id: Number(songId),
-                    Name: song.name,
-                    Author: song.author,
-                    Album: song.album || 'Single',
-                    Genre: song.genre || 'Âm nhạc',
-                    Duration: song.duration,
-                    FilePath: song.audioUrl,
-                    CoverPath: song.imageUrl,
-                    Liked: Boolean(song.liked)
-                }));
+            const url = `/Song/GetSongDetails/${songId}`;
+            console.log('Fetching song details from:', url);
+            return fetch(url)
+                .then(res => {
+                    console.log('API response status:', res.status);
+                    if (!res.ok) {
+                        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                    }
+                    return res.json();
+                })
+                .then(song => {
+                    console.log('Raw API response:', song);
+                    const transformedSong = {
+                        Id: songId, // Keep as string - MongoDB ObjectIds are strings
+                        Name: song.name,
+                        Author: song.author,
+                        Album: song.album || 'Single',
+                        Genre: song.genre || 'Âm nhạc',
+                        Duration: song.duration,
+                        FilePath: song.audioUrl,
+                        CoverPath: song.imageUrl,
+                        Liked: Boolean(song.liked)
+                    };
+                    console.log('Transformed song object:', transformedSong);
+                    return transformedSong;
+                });
         }
 
         function playSong(song) {
-            if (!song || !song.FilePath) return;
-            const songId = Number(song.Id);
+            console.log('playSong called with song:', song);
+            if (!song) {
+                console.error('Song object is null or undefined');
+                return;
+            }
+            
+            if (!song.FilePath) {
+                console.error('Song has no FilePath:', song);
+                alert('This song has no audio file associated with it.');
+                return;
+            }
+            
+            const songId = String(song.Id); // Keep as string
+            console.log('Playing song - songId:', songId, 'FilePath:', song.FilePath);
+            
             if (currentSongId === songId && audio.src && audio.src.includes(encodeURI(song.FilePath))) {
+                console.log('Same song already loaded, toggling play');
                 togglePlay();
                 return;
             }
@@ -308,13 +357,18 @@
             currentSongId = songId;
             window.currentSongId = songId;
 
-            audio.src = encodeURI(song.FilePath);
+            const encodedPath = encodeURI(song.FilePath);
+            console.log('Setting audio source to:', encodedPath);
+            audio.src = encodedPath;
+            
             audio.play().then(() => {
                 isPlaying = true;
                 updatePlayButton();
                 showPopupPlayer();
+                console.log('Playing audio successfully');
             }).catch(err => {
-                console.error('Lỗi phát nhạc:', err);
+                console.error('Error playing audio:', err);
+                alert('Failed to play audio: ' + err.message);
                 isPlaying = false;
                 updatePlayButton();
             });
@@ -324,30 +378,49 @@
         }
 
         function playSongFromCard(card) {
-            const songId = Number(card.dataset.songId);
-            if (!songId) return;
+            const songId = card.dataset.songId || card.dataset.id; // Keep as string
+            console.log('playSongFromCard called with songId:', songId);
+            if (!songId || songId === 'undefined') {
+                console.error('No valid songId found in card data');
+                return;
+            }
             openPlayer(songId);
         }
 
         function openPlayer(songId, playlist = null) {
+            console.log('openPlayer called with songId:', songId, 'playlist:', playlist);
+            if (!songId || songId === 'undefined') {
+                console.error('Invalid songId provided to openPlayer');
+                return;
+            }
+            
             if (playlist) {
                 setPlaylist(playlist, songId);
             } else {
                 setPlaylist(getPagePlaylist(), songId);
             }
 
+            console.log('Fetching song details for:', songId);
             fetchSongDetails(songId)
                 .then(song => {
-                    if (!song) return;
+                    console.log('Song details fetched:', song);
+                    if (!song) {
+                        console.error('Song is null or undefined');
+                        return;
+                    }
                     playSong(song);
                 })
-                .catch(err => console.error('Lỗi lấy dữ liệu bài hát:', err));
+                .catch(err => {
+                    console.error('Lỗi lấy dữ liệu bài hát:', err);
+                    alert('Failed to load song. Please check the console for details.');
+                });
         }
 
         function loadSong(songId) {
-            setPlaylist(currentPlaylistIds, songId);
-            currentSongIndex = currentPlaylistIds.indexOf(Number(songId));
-            fetchSongDetails(songId)
+            const songIdStr = String(songId);
+            setPlaylist(currentPlaylistIds, songIdStr);
+            currentSongIndex = currentPlaylistIds.indexOf(songIdStr);
+            fetchSongDetails(songIdStr)
                 .then(song => {
                     if (!song) return;
                     playSong(song);
@@ -633,10 +706,20 @@
                 body: new FormData(form),
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             })
-                .then(res => res.json())
+                .then(async res => {
+                    const text = await res.text();
+                    try {
+                        return JSON.parse(text);
+                    } catch {
+                        return { success: false, message: text || 'Có lỗi xảy ra, vui lòng thử lại.' };
+                    }
+                })
                 .then(data => {
                     if (data.success) window.location.href = data.redirectUrl || '/';
                     else alert(data.message);
+                })
+                .catch(err => {
+                    alert(err.message || 'Có lỗi xảy ra, vui lòng thử lại.');
                 });
         }
     </script>
