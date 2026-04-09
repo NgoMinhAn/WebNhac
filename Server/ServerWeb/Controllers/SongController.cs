@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using ServerWeb.Data;
 using ServerWeb.Models;
-using Microsoft.EntityFrameworkCore;
+using ServerWeb.Services;
+using MongoDB.Driver;
+using MongoDB.Bson;
 using System.Security.Claims;
 
 namespace ServerWeb.Controllers
@@ -15,19 +17,9 @@ namespace ServerWeb.Controllers
             _dbContext = dbContext;
         }
 
-        public IActionResult Details(int id)
+        public async Task<IActionResult> Details(string id)
         {
-            var song = _dbContext.Songs.Find(id);
-            if (song == null)
-            {
-                return NotFound();
-            }
-            return View(song);
-        }
-        // 1. Giao diện trang Chỉnh sửa: GET /Song/Edit/3
-        public IActionResult Edit(int id)
-        {
-            var song = _dbContext.Songs.Find(id);
+            var song = await _dbContext.Songs.FindByIdAsync(id);
             if (song == null)
             {
                 return NotFound();
@@ -35,25 +27,38 @@ namespace ServerWeb.Controllers
             return View(song);
         }
 
-        // 2. Xử lý lưu dữ liệu sau khi sửa: POST /Song/Edit/3
+        // GET: Edit page
+        public async Task<IActionResult> Edit(string id)
+        {
+            var song = await _dbContext.Songs.FindByIdAsync(id);
+            if (song == null)
+            {
+                return NotFound();
+            }
+            return View(song);
+        }
+
+        // POST: Save changes
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Song song, IFormFile? musicFile, IFormFile? coverFile)
+        public async Task<IActionResult> Edit(string id, Song song, IFormFile? musicFile, IFormFile? coverFile)
         {
-            if (id != song.Id) return NotFound();
+            if (id != song.Id)
+                return NotFound();
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    var existingSong = await _dbContext.Songs.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id);
-                    if (existingSong == null) return NotFound();
+                    var existingSong = await _dbContext.Songs.FindByIdAsync(id);
+                    if (existingSong == null)
+                        return NotFound();
 
-                    // Giữ lại đường dẫn cũ nếu không upload file mới
+                    // Keep old paths if no new files uploaded
                     song.FilePath = existingSong.FilePath;
                     song.CoverPath = existingSong.CoverPath;
 
-                    // Xử lý upload file nhạc mới (nếu có)
+                    // Upload new music file if provided
                     if (musicFile != null)
                     {
                         string musicName = Guid.NewGuid().ToString() + Path.GetExtension(musicFile.FileName);
@@ -65,7 +70,7 @@ namespace ServerWeb.Controllers
                         song.FilePath = "/Music/" + musicName;
                     }
 
-                    // Xử lý upload ảnh bìa mới (nếu có)
+                    // Upload new cover image if provided
                     if (coverFile != null)
                     {
                         string coverName = Guid.NewGuid().ToString() + Path.GetExtension(coverFile.FileName);
@@ -77,8 +82,7 @@ namespace ServerWeb.Controllers
                         song.CoverPath = "/images/" + coverName;
                     }
 
-                    _dbContext.Update(song);
-                    await _dbContext.SaveChangesAsync();
+                    await _dbContext.Songs.UpdateAsync(id, song);
                     return RedirectToAction("Index", "Home");
                 }
                 catch (Exception)
@@ -88,22 +92,33 @@ namespace ServerWeb.Controllers
             }
             return View(song);
         }
+
         [HttpGet]
-        public async Task<IActionResult> GetSongDetails(int id)
+        public async Task<IActionResult> GetSongDetails(string id)
         {
-            var song = await _dbContext.Songs.FindAsync(id);
-            if (song == null) return NotFound();
+            var song = await _dbContext.Songs.FindByIdAsync(id);
+            if (song == null)
+                return NotFound();
 
             var liked = false;
             if (User.Identity?.IsAuthenticated == true)
             {
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
+                if (userIdClaim != null)
                 {
-                    var likedPlaylist = await _dbContext.Playlists.FirstOrDefaultAsync(p => p.UserId == userId && p.Name == "Liked");
+                    var likedPlaylistFilter = Builders<Playlist>.Filter.And(
+                        Builders<Playlist>.Filter.Eq(p => p.UserId, userIdClaim.Value),
+                        Builders<Playlist>.Filter.Eq(p => p.Name, "Liked")
+                    );
+                    var likedPlaylist = await _dbContext.Playlists.Find(likedPlaylistFilter).FirstOrDefaultAsync();
+
                     if (likedPlaylist != null)
                     {
-                        liked = await _dbContext.PlaylistSongs.AnyAsync(ps => ps.PlaylistId == likedPlaylist.Id && ps.SongId == id);
+                        var playlistSongFilter = Builders<PlaylistSong>.Filter.And(
+                            Builders<PlaylistSong>.Filter.Eq(ps => ps.PlaylistId, likedPlaylist.Id),
+                            Builders<PlaylistSong>.Filter.Eq(ps => ps.SongId, id)
+                        );
+                        liked = await _dbContext.PlaylistSongs.Find(playlistSongFilter).AnyAsync();
                     }
                 }
             }
@@ -114,9 +129,9 @@ namespace ServerWeb.Controllers
                 author = song.Author,
                 album = song.Album,
                 genre = song.Genre,
-                duration = song.Duration.TotalHours >= 1 ? song.Duration.ToString(@"h\:mm\:ss") : song.Duration.ToString(@"mm\:ss"), // Chuyển TimeSpan thành chuỗi
+                duration = song.Duration.TotalHours >= 1 ? song.Duration.ToString(@"h\:mm\:ss") : song.Duration.ToString(@"mm\:ss"),
                 imageUrl = song.CoverPath ?? "/images/default-disk.png",
-                audioUrl = song.FilePath, // Đây là đường dẫn đến file .mp3
+                audioUrl = song.FilePath,
                 liked
             });
         }

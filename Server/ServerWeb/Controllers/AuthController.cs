@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using ServerWeb.Data;
 using ServerWeb.Models;
+using ServerWeb.Services;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -22,34 +25,88 @@ namespace ServerWeb.Controllers
         public IActionResult Register() => View();
 
         [HttpPost]
-        public async Task<IActionResult> Register(RegisterViewModel model)
+        public async Task<IActionResult> Register([FromForm] RegisterViewModel model)
         {
-            if (!ModelState.IsValid)
-                return HandleResponse(false, "Dữ liệu không hợp lệ!", "Register");
-
-            if (model.Password != model.ConfirmPassword)
-                return HandleResponse(false, "Mật khẩu xác nhận không khớp!", "Register");
-
-            var existingUser = _context.Users.FirstOrDefault(u => u.Email == model.Email || u.Username == model.Username);
-            if (existingUser != null)
-                return HandleResponse(false, "Email hoặc tên người dùng đã tồn tại!", "Register");
-
-            var user = new User
+            try
             {
-                Email = model.Email!,
-                Username = model.Username!,
-                PasswordHash = HashPassword(model.Password!),
-                PhoneNumber = model.PhoneNumber,
-                Role = "User"
-            };
+                model.Email ??= Request.Form["Email"].FirstOrDefault();
+                model.Username ??= Request.Form["Username"].FirstOrDefault();
+                model.Password ??= Request.Form["Password"].FirstOrDefault();
+                model.ConfirmPassword ??= Request.Form["ConfirmPassword"].FirstOrDefault();
+                model.PhoneNumber ??= Request.Form["PhoneNumber"].FirstOrDefault();
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+                if (!ModelState.IsValid)
+                    return HandleResponse(false, "Dữ liệu không hợp lệ!", "Register");
 
-            // Đăng ký xong cho đăng nhập luôn để về trang chủ
-            await SignInUser(user);
+                if (string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.Username) || string.IsNullOrWhiteSpace(model.Password))
+                    return HandleResponse(false, "Vui lòng nhập đầy đủ thông tin!", "Register");
 
-            return HandleResponse(true, "Đăng ký thành công!", "Index", "Home");
+                if (model.Password != model.ConfirmPassword)
+                    return HandleResponse(false, "Mật khẩu xác nhận không khớp!", "Register");
+
+                // Support mixed legacy/current schemas in the same collection.
+                var usersCollection = _context.Users.Database.GetCollection<BsonDocument>("users");
+                var normalizedEmail = model.Email.Trim();
+                var normalizedUsername = model.Username.Trim();
+
+                var combinedFilter = Builders<BsonDocument>.Filter.Or(
+                    Builders<BsonDocument>.Filter.Eq("Email", normalizedEmail),
+                    Builders<BsonDocument>.Filter.Eq("email", normalizedEmail),
+                    Builders<BsonDocument>.Filter.Eq("Username", normalizedUsername),
+                    Builders<BsonDocument>.Filter.Eq("username", normalizedUsername)
+                );
+
+                var existingUser = await usersCollection.Find(combinedFilter).FirstOrDefaultAsync();
+                if (existingUser != null)
+                    return HandleResponse(false, "Email hoặc tên người dùng đã tồn tại!", "Register");
+
+                var userId = ObjectId.GenerateNewId().ToString();
+                var hashedPassword = HashPassword(model.Password);
+                var now = DateTime.UtcNow;
+
+                var userDoc = new BsonDocument
+                {
+                    { "_id", ObjectId.Parse(userId) },
+                    { "Email", normalizedEmail },
+                    { "email", normalizedEmail },
+                    { "Username", normalizedUsername },
+                    { "username", normalizedUsername },
+                    { "PasswordHash", hashedPassword },
+                    { "password", hashedPassword },
+                    { "PhoneNumber", string.IsNullOrWhiteSpace(model.PhoneNumber) ? BsonNull.Value : model.PhoneNumber.Trim() },
+                    { "phoneNumber", string.IsNullOrWhiteSpace(model.PhoneNumber) ? BsonNull.Value : model.PhoneNumber.Trim() },
+                    { "Role", "User" },
+                    { "role", "User" },
+                    { "IsActive", true },
+                    { "isActive", true },
+                    { "CreatedAt", now },
+                    { "createdAt", now },
+                    { "UpdatedAt", now },
+                    { "updatedAt", now }
+                };
+
+                await usersCollection.InsertOneAsync(userDoc);
+
+                // Sign in after registration
+                var user = new User
+                {
+                    Id = userId,
+                    Email = normalizedEmail,
+                    Username = normalizedUsername,
+                    Role = "User"
+                };
+                await SignInUser(user);
+
+                return HandleResponse(true, "Đăng ký thành công!", "Index", "Home");
+            }
+            catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+            {
+                return HandleResponse(false, "Email hoặc tên người dùng đã tồn tại!", "Register");
+            }
+            catch
+            {
+                return HandleResponse(false, "Đăng ký thất bại, vui lòng thử lại.", "Register");
+            }
         }
 
         [HttpGet]
@@ -61,13 +118,35 @@ namespace ServerWeb.Controllers
             if (string.IsNullOrEmpty(model.Email) || string.IsNullOrEmpty(model.Password))
                 return HandleResponse(false, "Vui lòng nhập đầy đủ thông tin!", "Login");
 
-            var user = _context.Users.FirstOrDefault(u => u.Email == model.Email || u.Username == model.Email);
+            // Find by email or username while supporting mixed schemas.
+            var usersCollection = _context.Users.Database.GetCollection<BsonDocument>("users");
+            var loginValue = model.Email.Trim();
+            var lookupFilter = Builders<BsonDocument>.Filter.Or(
+                Builders<BsonDocument>.Filter.Eq("Email", loginValue),
+                Builders<BsonDocument>.Filter.Eq("email", loginValue),
+                Builders<BsonDocument>.Filter.Eq("Username", loginValue),
+                Builders<BsonDocument>.Filter.Eq("username", loginValue)
+            );
 
-            if (user != null && VerifyPassword(model.Password, user.PasswordHash))
+            var userDoc = await usersCollection.Find(lookupFilter).FirstOrDefaultAsync();
+            if (userDoc != null)
             {
+                var passwordHash = GetStringField(userDoc, "PasswordHash", "password");
+                if (!VerifyPassword(model.Password, passwordHash))
+                    return HandleResponse(false, "Tài khoản hoặc mật khẩu không chính xác!", "Login");
+
+                var objectId = userDoc.GetValue("_id", BsonNull.Value);
+                var user = new User
+                {
+                    Id = objectId.IsObjectId ? objectId.AsObjectId.ToString() : userDoc.GetValue("Id", "").ToString(),
+                    Email = GetStringField(userDoc, "Email", "email"),
+                    Username = GetStringField(userDoc, "Username", "username"),
+                    Role = GetStringField(userDoc, "Role", "role") ?? "User"
+                };
+
                 await SignInUser(user);
 
-                // Đăng nhập xong quay về trang chủ
+                // Return to home after login
                 return HandleResponse(true, "Đăng nhập thành công!", "Index", "Home");
             }
 
@@ -111,8 +190,21 @@ namespace ServerWeb.Controllers
             return Convert.ToBase64String(hashedBytes);
         }
 
-        private bool VerifyPassword(string password, string hash)
-            => HashPassword(password) == hash;
+        private bool VerifyPassword(string password, string? hash)
+            => !string.IsNullOrWhiteSpace(hash) && HashPassword(password) == hash;
+
+        private string? GetStringField(BsonDocument doc, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (doc.TryGetValue(key, out var value) && !value.IsBsonNull)
+                {
+                    return value.ToString();
+                }
+            }
+
+            return null;
+        }
 
         // Hàm xử lý phản hồi thông minh: Nếu là Ajax (Modal) thì trả về Json, nếu là Form thường thì Redirect
         private IActionResult HandleResponse(bool success, string message, string action, string controller = "Auth")

@@ -1,0 +1,83 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Từ chối truy cập";
+}
+
+<style>
+    .denied-container {
+        height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: white;
+    }
+
+    .error-code {
+        font-size: 10rem;
+        font-weight: 900;
+        background: linear-gradient(to bottom, #4b2c7b, #ff00cc);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        line-height: 1;
+        margin-bottom: 20px;
+    }
+
+    .denied-content h2 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 15px;
+    }
+
+    .denied-content p {
+        color: #aaa;
+        font-size: 1.1rem;
+        margin-bottom: 30px;
+    }
+
+    .btn-back {
+        background: linear-gradient(45deg, #4b2c7b, #6a11cb);
+        color: white;
+        border: none;
+        padding: 12px 35px;
+        border-radius: 50px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: 0.3s;
+        display: inline-block;
+    }
+
+    .btn-back:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(75, 44, 123, 0.4);
+        color: white;
+    }
+
+    /* Hiệu ứng mờ ảo phía sau */
+    .bg-glow {
+        position: absolute;
+        width: 300px;
+        height: 300px;
+        background: #4b2c7b;
+        filter: blur(150px);
+        border-radius: 50%;
+        z-index: -1;
+        opacity: 0.5;
+    }
+</style>
+
+<div class="denied-container">
+    <div class="bg-glow"></div>
+    <div class="denied-content">
+        <div class="error-code">403</div>
+        <h2>Dừng lại một chút!</h2>
+        <p>
+            Có vẻ như bạn không có quyền truy cập vào khu vực này.<br>
+            Vui lòng kiểm tra lại tài khoản hoặc liên hệ quản trị viên.
+        </p>
+
+        <a href="/" class="btn-back">
+            <i class="fas fa-home me-2"></i> Quay về trang chủ
+        </a>
+    </div>
+</div>

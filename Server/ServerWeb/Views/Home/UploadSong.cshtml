@@ -127,8 +127,8 @@
                     style="max-width: 150px; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #f6da91;" />
             </div>
 
-            <label for="file">Tệp nhạc (MP3, WAV...)</label>
-            <input type="file" id="file" name="file" accept="audio/*" required />
+            <label for="musicFile">Tệp nhạc (MP3, WAV...)</label>
+            <input type="file" id="musicFile" name="musicFile" accept="audio/*" required />
 
             <input type="hidden" id="duration" name="Duration" value="" />
             <div id="durationDisplay" style="margin-bottom: 15px; color: #f6da91; font-weight: bold; font-size: .9rem;">
@@ -163,7 +163,7 @@
     });
 
     // XỬ LÝ THỜI LƯỢNG NHẠC
-    const fileInput = document.getElementById('file');
+    const fileInput = document.getElementById('musicFile');
     const durationInput = document.getElementById('duration');
     const durationDisplay = document.getElementById('durationDisplay');
 

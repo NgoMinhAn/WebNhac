@@ -25,7 +25,7 @@
         <div id="playlistCards" class="card-grid">
             @if (!playlistSongs.Any())
             {
-                <p style="color: #eee;">Chưa có playlist nào. Hãy thêm bài hát vào thư viện của bạn đềEhiển thềEềEđây.</p>
+                <p style="color: #eee;">Chưa có playlist nào. Hãy thêm bài hát vào thư viện của bạn để hiển thị ở đây.</p>
             }
             else
             {
@@ -88,15 +88,15 @@
     window.addEventListener('songLikeToggled', event => {
         const detail = event?.detail;
         if (!detail) return;
-        const songId = Number(detail.songId);
+        const songId = String(detail.songId); // Keep as string
         const liked = Boolean(detail.liked);
         if (liked) {
-            const song = allSongs.find(s => Number(s.Id) === songId);
-            if (song && !window.likedSongs.some(s => Number(s.Id) === songId)) {
+            const song = allSongs.find(s => String(s.Id) === songId); // Keep as string
+            if (song && !window.likedSongs.some(s => String(s.Id) === songId)) { // Keep as string
                 window.likedSongs.push(song);
             }
         } else {
-            window.likedSongs = window.likedSongs.filter(s => Number(s.Id) !== songId);
+            window.likedSongs = window.likedSongs.filter(s => String(s.Id) !== songId); // Keep as string
         }
         refreshLikedArtists();
         if (currentMode === 'song') {
@@ -107,8 +107,8 @@
     });
 
     function playSongFromCard(card) {
-        const songId = Number(card.dataset.songId);
-        if (!songId) return;
+        const songId = card.dataset.songId; // Keep as string
+        if (!songId || songId === 'undefined') return;
         openPlayer(songId);
     }
 

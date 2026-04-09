@@ -415,8 +415,8 @@
 
         function getDiscoverySongIds() {
             return Array.from(document.querySelectorAll('.song-card[data-song-id]'))
-                .map(card => Number(card.dataset.songId))
-                .filter(id => !Number.isNaN(id));
+                .map(card => card.dataset.songId) // Keep as string - MongoDB ObjectIds
+                .filter(id => id && id !== 'undefined' && id !== 'NaN');
         }
 
         function playDiscoverySong(songId) {
@@ -430,8 +430,8 @@
 
         document.querySelectorAll('.song-card').forEach(card => {
             card.addEventListener('click', function() {
-                const songId = Number(this.dataset.songId);
-                if (!songId) return;
+                const songId = this.dataset.songId; // Keep as string
+                if (!songId || songId === 'undefined') return;
                 playDiscoverySong(songId);
             });
         });
@@ -439,8 +439,8 @@
         document.querySelectorAll('.play-icon').forEach(button => {
             button.addEventListener('click', function(event) {
                 event.stopPropagation();
-                const songId = Number(this.dataset.id);
-                if (!songId) return;
+                const songId = this.dataset.id; // Keep as string
+                if (!songId || songId === 'undefined') return;
                 playDiscoverySong(songId);
             });
         });

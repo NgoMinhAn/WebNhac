@@ -22,24 +22,39 @@
             <div class="table-body">
                 @if (Model != null)
                 {
+                    @if (!Model.Any())
+                    {
+                        <div style="padding: 20px; color: #999;">Không có người dùng nào</div>
+                    }
                     foreach (var user in Model)
                     {
-                        <div class="table-row">
+                        <div class="table-row"
+                             data-user-id="@user.Id"
+                             data-user-name="@user.Name"
+                             data-user-username="@user.Username"
+                             data-user-email="@user.Email"
+                             data-user-phone="@user.PhoneNumber"
+                             data-user-role="@user.Role"
+                             data-user-active="@user.IsActive.ToString().ToLower()">
                             <div class="table-col col-username">
-                                <strong>@user.Username</strong>
+                                <strong>@(string.IsNullOrEmpty(user.Username) ? user.Name ?? user.Email ?? "Unknown" : user.Username)</strong>
                             </div>
                             <div class="table-col col-role">
                                 <span class="role-badge">@(user.Role ?? "User")</span>
                             </div>
                             <div class="table-col col-status">
-                                <span class="status-badge">Hoạt động</span>
+                                <span class="status-badge">@(user.IsActive ? "Hoạt động" : "Bị khóa")</span>
                             </div>
                             <div class="table-col col-actions">
-                                <i class="fas fa-edit" style="color: #f1c40f; margin-right: 15px; cursor: pointer;"></i>
-                                <i class="fas fa-trash" style="color: #ff5e5e; cursor: pointer;"></i>
+                                <i class="fas fa-edit edit-btn" style="color: #f1c40f; margin-right: 15px; cursor: pointer;"></i>
+                                <i class="fas fa-trash delete-btn" style="color: #ff5e5e; cursor: pointer;"></i>
                             </div>
                         </div>
                     }
+                }
+                else
+                {
+                    <div style="padding: 20px; color: #999;">Lỗi tải dữ liệu người dùng</div>
                 }
             </div>
         </div>
@@ -225,3 +240,219 @@
         background: rgba(255, 255, 255, 0.3);
     }
 </style>
+
+<div id="editUserOverlay" class="delete-overlay hidden">
+    <div class="delete-popup" style="background: #333; border-radius: 10px; padding: 30px; min-width: 460px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);">
+        <h2 style="color: white; margin-bottom: 18px;">Chỉnh sửa người dùng</h2>
+        <div style="display: grid; gap: 12px;">
+            <input id="editUserName" type="text" placeholder="Tên hiển thị" style="padding: 10px; border-radius: 6px; border: 1px solid #555; background: #222; color: #fff;" />
+            <input id="editUserUsername" type="text" placeholder="Username" style="padding: 10px; border-radius: 6px; border: 1px solid #555; background: #222; color: #fff;" />
+            <input id="editUserEmail" type="email" placeholder="Email" style="padding: 10px; border-radius: 6px; border: 1px solid #555; background: #222; color: #fff;" />
+            <input id="editUserPhone" type="text" placeholder="Số điện thoại" style="padding: 10px; border-radius: 6px; border: 1px solid #555; background: #222; color: #fff;" />
+            <select id="editUserRole" style="padding: 10px; border-radius: 6px; border: 1px solid #555; background: #222; color: #fff;">
+                <option value="User">User</option>
+                <option value="Admin">Admin</option>
+            </select>
+            <select id="editUserStatus" style="padding: 10px; border-radius: 6px; border: 1px solid #555; background: #222; color: #fff;">
+                <option value="true">Hoạt động</option>
+                <option value="false">Bị khóa</option>
+            </select>
+        </div>
+        <div class="delete-actions" style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px;">
+            <button type="button" class="btn-cancel" onclick="closeEditPopup()" style="background: #555; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Hủy</button>
+            <button type="button" class="btn-delete" onclick="saveUserEdit()" style="background: #6f42c1; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Lưu</button>
+        </div>
+    </div>
+</div>
+
+<div id="deleteConfirmationOverlay" class="delete-overlay hidden">
+    <div class="delete-popup" style="background: #333; border-radius: 10px; padding: 30px; min-width: 400px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);">
+        <h2 style="color: white; margin-bottom: 15px;">Xóa người dùng</h2>
+        <p style="color: #ccc; margin-bottom: 25px;">Bạn có chắc muốn xóa người dùng này? Hành động này không thể hoàn tác.</p>
+        <div class="delete-actions" style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button type="button" class="btn-cancel" onclick="closeDeletePopup()" style="background: #555; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Hủy</button>
+            <button type="button" class="btn-delete" onclick="confirmDeleteUser()" style="background: #ff5e5e; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Xóa</button>
+        </div>
+    </div>
+    <style>
+        .delete-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        
+        .delete-overlay.hidden {
+            display: none !important;
+        }
+        
+        .delete-popup {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            min-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn-cancel:hover {
+            background: #666 !important;
+        }
+        
+        .btn-delete:hover {
+            background: #ff4444 !important;
+        }
+    </style>
+</div>
+
+@section Scripts {
+    <script>
+        var userToDelete = null;
+        var userToEdit = null;
+
+        function initializeButtons() {
+            // Event delegation for buttons
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-btn')) {
+                    const row = e.target.closest('.table-row');
+                    if (row) {
+                        const userId = row.getAttribute('data-user-id');
+                        if (userId) {
+                            deleteUser(userId);
+                        }
+                    }
+                } else if (e.target.classList.contains('edit-btn')) {
+                    const row = e.target.closest('.table-row');
+                    if (row) {
+                        const userId = row.getAttribute('data-user-id');
+                        if (userId) {
+                            editUser(userId);
+                        }
+                    }
+                }
+            });
+        }
+
+        function editUser(id) {
+            const row = document.querySelector(`.table-row[data-user-id="${id}"]`);
+            if (!row) return;
+
+            userToEdit = id;
+            document.getElementById('editUserName').value = row.getAttribute('data-user-name') || '';
+            document.getElementById('editUserUsername').value = row.getAttribute('data-user-username') || '';
+            document.getElementById('editUserEmail').value = row.getAttribute('data-user-email') || '';
+            document.getElementById('editUserPhone').value = row.getAttribute('data-user-phone') || '';
+            document.getElementById('editUserRole').value = row.getAttribute('data-user-role') || 'User';
+            document.getElementById('editUserStatus').value = row.getAttribute('data-user-active') || 'true';
+
+            var overlay = document.getElementById('editUserOverlay');
+            if (overlay) {
+                overlay.classList.remove('hidden');
+            }
+        }
+
+        function closeEditPopup() {
+            userToEdit = null;
+            var overlay = document.getElementById('editUserOverlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function saveUserEdit() {
+            if (!userToEdit) return;
+
+            const payload = {
+                id: userToEdit,
+                name: document.getElementById('editUserName').value.trim(),
+                username: document.getElementById('editUserUsername').value.trim(),
+                email: document.getElementById('editUserEmail').value.trim(),
+                phoneNumber: document.getElementById('editUserPhone').value.trim(),
+                role: document.getElementById('editUserRole').value,
+                isActive: document.getElementById('editUserStatus').value === 'true'
+            };
+
+            fetch('/Home/UpdateUser', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Cập nhật người dùng thành công');
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + (data.message || 'Không thể cập nhật người dùng'));
+                }
+                closeEditPopup();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Lỗi: ' + error.message);
+                closeEditPopup();
+            });
+        }
+
+        function deleteUser(id) {
+            console.log('Delete user:', id);
+            userToDelete = id;
+            var overlay = document.getElementById('deleteConfirmationOverlay');
+            if (overlay) {
+                overlay.classList.remove('hidden');
+            }
+        }
+
+        function closeDeletePopup() {
+            userToDelete = null;
+            var overlay = document.getElementById('deleteConfirmationOverlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function confirmDeleteUser() {
+            if (!userToDelete) return;
+            
+            console.log('Confirming delete for user:', userToDelete);
+
+            fetch('/Home/DeleteUser', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id: userToDelete })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Xóa người dùng thành công');
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + (data.message || 'Không thể xóa người dùng'));
+                }
+                closeDeletePopup();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Lỗi: ' + error.message);
+                closeDeletePopup();
+            });
+        }
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeButtons);
+        } else {
+            initializeButtons();
+        }
+    </script>
+}
