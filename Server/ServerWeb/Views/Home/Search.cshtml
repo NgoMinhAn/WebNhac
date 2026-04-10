@@ -1,0 +1,334 @@
+@{
+    ViewData["Title"] = "Kết quả tìm kiếm";
+    var searchQuery = ViewBag.SearchQuery ?? "";
+    var songs = (List<ServerWeb.Models.Song>)ViewBag.Songs ?? new List<ServerWeb.Models.Song>();
+    var artists = (List<string>)ViewBag.Artists ?? new List<string>();
+    var playlists = (List<ServerWeb.Models.Playlist>)ViewBag.Playlists ?? new List<ServerWeb.Models.Playlist>();
+
+    string FormatDuration(TimeSpan duration) => duration.TotalHours >= 1 ? duration.ToString(@"h\:mm\:ss") : duration.ToString(@"mm\:ss");
+}
+
+<div class="search-container">
+    <div class="search-header">
+        <h1>Kết quả tìm kiếm cho: <span class="query-text">@searchQuery</span></h1>
+    </div>
+
+    @if (songs.Any() || artists.Any() || playlists.Any())
+    {
+        @if (songs.Any())
+        {
+            <section class="search-section">
+                <h2 class="section-title">Bài hát</h2>
+                <div class="songs-grid">
+                    @foreach (var song in songs)
+                    {
+                        <div class="music-card" 
+                             data-song-id="@song.Id" 
+                             data-song-name="@song.Name" 
+                             data-song-author="@song.Author" 
+                             data-song-album="@song.Album" 
+                             data-song-genre="@song.Genre" 
+                             data-song-duration="@FormatDuration(song.Duration)"
+                             @if (!string.IsNullOrEmpty(song.FilePath)) { <text>data-file-path="@Url.Content(song.FilePath)"</text> }
+                             @if (!string.IsNullOrEmpty(song.CoverPath)) { <text>data-cover-path="@Url.Content(song.CoverPath)"</text> }
+                             @if (!string.IsNullOrEmpty(song.FilePath)) { <text>onclick="playSongFromCard(this)"</text> }>
+                            <div class="card-thumb" style="background-image: url('@(string.IsNullOrEmpty(song.CoverPath) ? "https://via.placeholder.com/300x180?text=No+Cover" : Url.Content(song.CoverPath))'); background-size: cover; background-position: center;"></div>
+                            <div class="card-info">
+                                <h3>@song.Name</h3>
+                                <p>@song.Author • @FormatDuration(song.Duration)</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (artists.Any())
+        {
+            <section class="search-section">
+                <h2 class="section-title">Nghệ sĩ</h2>
+                <div class="artists-grid">
+                    @foreach (var artist in artists)
+                    {
+                        var artistSongs = songs.Where(s => s.Author == artist).Count();
+                        <div class="artist-card">
+                            <a href="/Home/Artist?name=@Uri.EscapeDataString(artist)" class="artist-link">
+                                <div class="artist-avatar">
+                                    <i class="fas fa-user-tie"></i>
+                                </div>
+                                <div class="artist-info">
+                                    <h3>@artist</h3>
+                                    <p class="artist-meta">@artistSongs bài hát</p>
+                                </div>
+                            </a>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (playlists.Any())
+        {
+            <section class="search-section">
+                <h2 class="section-title">Danh sách phát</h2>
+                <div class="playlists-grid">
+                    @foreach (var playlist in playlists)
+                    {
+                        <div class="playlist-card">
+                            <a href="/Playlist/Details/@playlist.Id" class="playlist-link">
+                                <div class="playlist-cover" style="background: linear-gradient(135deg, #4423a6, #8a4dff); position: relative; overflow: hidden;">
+                                    @if (!string.IsNullOrEmpty(playlist.ImageUrl))
+                                    {
+                                        <img src="@playlist.ImageUrl" alt="@playlist.Name" style="width: 100%; height: 100%; object-fit: cover;" />
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-music" style="font-size: 60px;"></i>
+                                    }
+                                </div>
+                                <div class="playlist-info">
+                                    <h3>@playlist.Name</h3>
+                                    <p class="playlist-meta">@(playlist.PlaylistSongs?.Count ?? 0) bài hát</p>
+                                </div>
+                            </a>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fas fa-search"></i>
+            <p>Không tìm thấy kết quả cho "<strong>@searchQuery</strong>"</p>
+            <p class="empty-hint">Thử tìm kiếm bằng tên bài hát, nghệ sĩ hoặc danh sách phát khác</p>
+        </div>
+    }
+</div>
+
+<style>
+
+
+    .search-header {
+        margin-bottom: 40px;
+    }
+
+    .search-header h1 {
+        font-size: 2.5rem;
+        font-weight: 900;
+        margin: 0 0 10px 0;
+    }
+
+    .query-text {
+        color: #b085ff;
+    }
+
+    .search-section {
+        margin-bottom: 50px;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+        color: #ffffff;
+    }
+
+    .songs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+    }
+
+    .music-card {
+        background: rgba(58, 24, 126, 0.3);
+        border-radius: 12px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform 0.2s ease, background 0.2s ease;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .music-card:hover {
+        transform: translateY(-5px);
+        background: rgba(58, 24, 126, 0.5);
+    }
+
+    .card-thumb {
+        width: 100%;
+        height: 180px;
+        background-size: cover;
+        background-position: center;
+        background: linear-gradient(135deg, #4423a6, #8a4dff);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .card-info {
+        padding: 15px;
+    }
+
+    .card-info h3 {
+        margin: 0 0 8px 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #ffffff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .card-info p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: #c9beff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .artists-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 20px;
+    }
+
+    .artist-card {
+        border-radius: 12px;
+        overflow: hidden;
+        background: rgba(58, 24, 126, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .artist-link {
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 25px 15px;
+        height: 100%;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .artist-card:hover {
+        transform: translateY(-5px);
+        background: rgba(58, 24, 126, 0.5);
+    }
+
+    .artist-avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4423a6, #8a4dff);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 50px;
+        color: rgba(255, 255, 255, 0.8);
+        margin-bottom: 15px;
+    }
+
+    .artist-info {
+        width: 100%;
+    }
+
+    .artist-info h3 {
+        margin: 0 0 8px 0;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #ffffff;
+        word-break: break-word;
+    }
+
+    .artist-meta {
+        margin: 0;
+        font-size: 0.9rem;
+        color: #c9beff;
+    }
+
+    .playlists-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 20px;
+    }
+
+    .playlist-card {
+        border-radius: 12px;
+        overflow: hidden;
+        background: rgba(58, 24, 126, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .playlist-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        height: 100%;
+    }
+
+    .playlist-card:hover {
+        transform: translateY(-5px);
+        background: rgba(58, 24, 126, 0.5);
+    }
+
+    .playlist-cover {
+        width: 100%;
+        height: 180px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 60px;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .playlist-info {
+        padding: 15px;
+    }
+
+    .playlist-info h3 {
+        margin: 0 0 8px 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #ffffff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .playlist-meta {
+        margin: 0;
+        font-size: 0.9rem;
+        color: #c9beff;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 80px 20px;
+    }
+
+    .empty-state i {
+        font-size: 80px;
+        color: #6e5db8;
+        margin-bottom: 20px;
+        display: block;
+    }
+
+    .empty-state p {
+        font-size: 1.2rem;
+        color: #c9beff;
+        margin: 10px 0;
+    }
+
+    .empty-hint {
+        color: #8a7daabb !important;
+        font-size: 1rem !important;
+    }
+</style>

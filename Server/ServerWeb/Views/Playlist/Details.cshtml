@@ -462,15 +462,33 @@
             if (playlistTitle) {
                 playlistTitle.addEventListener('blur', async function () {
                     const newName = this.innerText.trim();
-                    if (!newName) return;
+                    if (!newName) {
+                        console.warn('Tên playlist không được để trống');
+                        return;
+                    }
+
+                    console.log('Updating playlist name to:', newName, 'for playlistId:', playlistId);
 
                     try {
-                        await fetch('/Playlist/UpdateName', {
+                        const response = await fetch('/Playlist/UpdateName', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: playlistId, name: newName })
+                            body: JSON.stringify({ playlistId: playlistId, newName: newName })
                         });
-                    } catch (err) { console.error("Lỗi cập nhật tên:", err); }
+
+                        const data = await response.json();
+                        console.log('Update response:', data);
+
+                        if (response.ok && data.success) {
+                            console.log('Playlist name updated successfully');
+                        } else {
+                            console.error('Failed to update playlist name:', data.message);
+                            alert('Lỗi: ' + (data.message || 'Không thể cập nhật tên playlist'));
+                        }
+                    } catch (err) { 
+                        console.error("Lỗi cập nhật tên:", err);
+                        alert('Lỗi khi cập nhật tên playlist: ' + err.message);
+                    }
                 });
             }
         } catch (err) {
@@ -491,13 +509,26 @@
                         this.innerText = newDescription || '';
                     }
 
+                    console.log('Updating playlist description to:', newDescription, 'for playlistId:', playlistId);
+
                     try {
-                        await fetch('/Playlist/UpdateDescription', {
+                        const response = await fetch('/Playlist/UpdateDescription', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: playlistId, description: newDescription })
+                            body: JSON.stringify({ playlistId: playlistId, description: newDescription })
                         });
-                    } catch (err) { console.error("Lỗi cập nhật mô tả:", err); }
+
+                        const data = await response.json();
+                        console.log('Description update response:', data);
+
+                        if (response.ok && data.success) {
+                            console.log('Playlist description updated successfully');
+                        } else {
+                            console.error('Failed to update playlist description:', data.message);
+                        }
+                    } catch (err) { 
+                        console.error("Lỗi cập nhật mô tả:", err);
+                    }
                 });
             }
         } catch (err) {
@@ -510,8 +541,8 @@
             if (!file) return;
 
             const formData = new FormData();
-            formData.append('id', playlistId);
-            formData.append('image', file);
+            formData.append('playlistId', playlistId);
+            formData.append('imageFile', file);
 
             try {
                 const response = await fetch('/Playlist/UpdateImage', {
@@ -519,16 +550,24 @@
                     body: formData
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
+                const data = await response.json();
+                console.log('Image upload response:', data);
+
+                if (response.ok && data.success) {
                     const imgTag = document.getElementById('playlistImg');
                     const iconTag = document.getElementById('coverIcon');
 
                     if (iconTag) iconTag.style.display = 'none';
-                    imgTag.src = data.newUrl;
+                    imgTag.src = data.imageUrl;
                     imgTag.style.display = 'block';
+                    alert('Cập nhật ảnh bìa thành công!');
+                } else {
+                    alert("Lỗi khi upload ảnh bìa: " + (data.message || 'Không xác định'));
                 }
-            } catch (err) { alert("Lỗi khi upload ảnh bìa!"); }
+            } catch (err) { 
+                console.error("Lỗi upload ảnh:", err);
+                alert("Lỗi khi upload ảnh bìa: " + err.message); 
+            }
         }
 
         // 3. Tìm kiếm bài hát
@@ -670,7 +709,7 @@
         // 7. Toggle trạng thái Riêng tư/Công khai
         async function togglePrivacy() {
             try {
-                const response = await fetch(`/Playlist/TogglePrivacy?id=${playlistId}`, {
+                const response = await fetch(`/Playlist/TogglePrivacy?playlistId=${playlistId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });

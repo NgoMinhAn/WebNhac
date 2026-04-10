@@ -116,6 +116,14 @@ namespace ServerWeb.Controllers
                     .Limit(50)
                     .ToListAsync();
 
+                // Get unique artists from search
+                var artists = songs
+                    .Where(s => !string.IsNullOrWhiteSpace(s.Author))
+                    .Select(s => s.Author!)
+                    .Distinct()
+                    .OrderBy(a => a)
+                    .ToList();
+
                 var playlistNameFilter = Builders<Playlist>.Filter.Regex(p => p.Name, new BsonRegularExpression(query, "i"));
                 var playlistDescFilter = Builders<Playlist>.Filter.Regex(p => p.Description, new BsonRegularExpression(query, "i"));
                 var isNotPrivateFilter = Builders<Playlist>.Filter.Eq(p => p.IsPrivate, false);
@@ -131,6 +139,7 @@ namespace ServerWeb.Controllers
 
                 ViewBag.SearchQuery = query;
                 ViewBag.Songs = songs;
+                ViewBag.Artists = artists;
                 ViewBag.Playlists = playlists;
                 return View();
             }

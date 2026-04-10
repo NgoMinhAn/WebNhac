@@ -177,6 +177,32 @@ namespace ServerWeb.Controllers
         }
 
         [HttpPost]
+        public async Task<IActionResult> UpdateDescription(string playlistId, string description)
+        {
+            var playlist = await _context.Playlists.FindByIdAsync(playlistId);
+            if (playlist == null)
+                return Json(new { success = false, message = "Playlist không tồn tại" });
+
+            playlist.Description = description ?? string.Empty;
+            await _context.Playlists.UpdateAsync(playlistId, playlist);
+
+            return Json(new { success = true, message = "Cập nhật mô tả playlist thành công" });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> TogglePrivacy(string playlistId)
+        {
+            var playlist = await _context.Playlists.FindByIdAsync(playlistId);
+            if (playlist == null)
+                return Json(new { success = false, message = "Playlist không tồn tại" });
+
+            playlist.IsPrivate = !playlist.IsPrivate;
+            await _context.Playlists.UpdateAsync(playlistId, playlist);
+
+            return Json(new { success = true, isPrivate = playlist.IsPrivate, message = "Cập nhật trạng thái playlist thành công" });
+        }
+
+        [HttpPost]
         public async Task<IActionResult> UpdateImage(string playlistId, IFormFile imageFile)
         {
             if (imageFile == null || imageFile.Length == 0)

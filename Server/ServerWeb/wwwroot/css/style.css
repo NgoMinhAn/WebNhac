@@ -128,25 +128,35 @@ body {
 }
 
 .search-box {
-    background: white;
+    background: white !important;
     border-radius: 25px;
     padding: 8px 20px;
-    width: 450px;
-    display: flex;
+    display: flex !important;
     align-items: center;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .search-box i {
     color: #888;
+    flex-shrink: 0;
 }
 
 .search-box input {
-    border: none;
-    outline: none;
+    border: none !important;
+    outline: none !important;
     margin-left: 10px;
-    width: 100%;
+    width: 100% !important;
     font-size: 14px;
+    background: white !important;
+    color: #333 !important;
+}
+
+.search-box input:focus {
+    box-shadow: none !important;
+}
+
+.search-box input::placeholder {
+    color: #999;
 }
 
 .auth-buttons {
@@ -212,6 +222,7 @@ body {
     background: #fff;
 }
 
+/* Popup Player Styling */
 .popup-player {
     position: fixed;
     width: min(1130px, calc(100vw - 40px));
